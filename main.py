@@ -22,7 +22,7 @@ parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--multi_layer', type=int, default=5)
 parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--validate_freq', type=int, default=1)
-parser.add_argument('--batch_size', type=int, default=8)
+parser.add_argument('--batch_size', type=int, default=128)
 parser.add_argument('--norm_method', type=str, default='z_score')
 parser.add_argument('--optimizer', type=str, default='N') #
 parser.add_argument('--early_stop', type=bool, default=False)

@@ -11,7 +11,7 @@ def MAPE(v, v_, axis=None):
     :return: int, MAPE averages on all elements of input.
     '''
     mape = (np.abs(v_ - v) / np.abs(v) + 1e-5).astype(np.float64)
-    mape = np.where(mape > 5, 5, mape)
+    mape = np.where(mape > 5, 0, mape)
     return np.mean(mape, axis)
 
 

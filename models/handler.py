@@ -13,7 +13,10 @@ import os
 from models.StackTWaveNetTransformerEncoder import WASN
 
 from utils.math_utils import evaluate
+from thop import profile, clever_format
+from utils.flops import print_model_parm_flops
 
+from utils.loss import smooth_l1_loss
 
 def save_model(model, model_dir, epoch=None):
     if model_dir is None:
@@ -38,6 +41,10 @@ def load_model(model_dir, epoch=None):
     with open(file_name, 'rb') as f:
         model = torch.load(f)
     return model
+
+def count_params(model, ):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
 
 
 def inference(model, dataloader, device, node_cnt, window_size, horizon):
@@ -167,7 +174,7 @@ def adjust_learning_rate(optimizer, epoch, args):
             param_group['lr'] = lr
         print('Updating learning rate to {}'.format(lr))
 
-def train(train_data, valid_data, args, result_file):
+def train(train_data, valid_data, test_data, args, result_file):
     node_cnt = train_data.shape[1]
     model = Model(node_cnt, 2, args.window_size, args.multi_layer, horizon=args.horizon)
     # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
@@ -182,14 +189,19 @@ def train(train_data, valid_data, args, result_file):
                       number_level_part=part,
                       haar_wavelet=False)
 
-
-
+    print('Parameters of need to grad is:{} M'.format(count_params(model) / 1000000.0))
+    in1 = torch.randn(8,12,170)
+    flops, params = profile(model, inputs=(in1, ))
+    macs, params = clever_format([flops, params], "%.3f")
+    print('MACs: {}, Parameters: {}'.format(macs, params))
+#    print_model_parm_flops(model)
     model.to(args.device)
     if len(train_data) == 0:
         raise Exception('Cannot organize enough training data')
     if len(valid_data) == 0:
         raise Exception('Cannot organize enough validation data')
-
+    if len(test_data) == 0:
+        raise Exception('Cannot organize enough test data')
     if args.norm_method == 'z_score':
         train_mean = np.mean(train_data, axis=0)
         train_std = np.std(train_data, axis=0)
@@ -212,12 +224,17 @@ def train(train_data, valid_data, args, result_file):
                                 normalize_method=args.norm_method, norm_statistic=normalize_statistic)
     valid_set = ForecastDataset(valid_data, window_size=args.window_size, horizon=args.horizon,
                                 normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+    test_set = ForecastDataset(test_data, window_size=args.window_size, horizon=args.horizon,
+                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
     train_loader = torch_data.DataLoader(train_set, batch_size=args.batch_size, drop_last=False, shuffle=True,
-                                         num_workers=0)
-    valid_loader = torch_data.DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, num_workers=0)
+                                         num_workers=1)
+    valid_loader = torch_data.DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
+    test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
 
-    forecast_loss = nn.MSELoss(reduction='mean').to(args.device)
-
+#    forecast_loss = nn.MSELoss(reduction='mean').to(args.device)
+    #forecast_loss = nn.L1Loss().to(args.device)
+#    forecast_loss = nn.SmoothL1Loss().to(args.device)
+    forecast_loss =  smooth_l1_loss
     total_params = 0
     for name, parameter in model.named_parameters():
         if not parameter.requires_grad: continue
@@ -242,15 +259,13 @@ def train(train_data, valid_data, args, result_file):
             target = target.to(args.device)  # torch.Size([32, 3, 228])
             model.zero_grad()
             forecast, res = model(inputs)
-
             # loss = forecast_loss(forecast, target) + forecast_loss(res, target)
             # loss1 = forecast_loss(forecast, target)
             # loss2 = forecast_loss(res, target)
-
-            loss = forecast_loss(forecast, target) + forecast_loss(res, target)
-            loss_F = forecast_loss(forecast, target)
-            loss_M = forecast_loss(res, target)
-
+            beta = 0.01 #for the threshold of the smooth L1 loss
+            loss = forecast_loss(forecast, target, beta) + forecast_loss(res, target, beta)
+            loss_F = forecast_loss(forecast, target, beta)
+            loss_M = forecast_loss(res, target, beta)
             cnt += 1
             loss.backward()
             my_optim.step()
@@ -270,10 +285,14 @@ def train(train_data, valid_data, args, result_file):
                 validate(model, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
                          result_file=None)
+            test_metrics=validate(model, forecast_loss, test_loader, args.device, args.norm_method, normalize_statistic,
+                         node_cnt, args.window_size, args.horizon,
+                         result_file=None)
             if best_validate_mae > performance_metrics['mae']:
                 best_validate_mae = performance_metrics['mae']
                 is_best_for_now = True
                 validate_score_non_decrease_count = 0
+                print('got best validation/val result:',performance_metrics, test_metrics)
             else:
                 validate_score_non_decrease_count += 1
             # save model

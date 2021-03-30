@@ -1,6 +1,6 @@
 import os
 import torch
-os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+#os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
 from models.handler import train, test,retrain
 import argparse
@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--train', type=bool, default=True)
 parser.add_argument('--evaluate', type=bool, default=False)
 parser.add_argument('--finetune', type=bool, default=False)
-parser.add_argument('--dataset', type=str, default='PeMS08')  #PeMS07
+parser.add_argument('--dataset', type=str, default='PEMS08')  #PeMS07
 parser.add_argument('--window_size', type=int, default=12)
 parser.add_argument('--horizon', type=int, default=12)
 parser.add_argument('--train_length', type=float, default=6)
@@ -46,7 +46,6 @@ parser.add_argument('--dilation', default=1, type=int, help='dilation')
 
 args = parser.parse_args()
 print(f'Training configs: {args}')
-
 data_file = os.path.join('dataset', args.dataset + '.npz')
 result_train_file = os.path.join('output', args.dataset, 'train')
 result_test_file = os.path.join('output', args.dataset, 'test')
@@ -78,7 +77,7 @@ if __name__ == '__main__':
     if args.train:
         try:
             before_train = datetime.now().timestamp()
-            _, normalize_statistic = train(train_data, test_data, args, result_train_file)
+            _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file)
             after_train = datetime.now().timestamp()
             print(f'Training took {(after_train - before_train) / 60} minutes')
         except KeyboardInterrupt:

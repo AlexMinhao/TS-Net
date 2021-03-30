@@ -509,8 +509,9 @@ class WASN(nn.Module):
         return signal
 
     def forward(self, x):
-        x += self.get_position_encoding(x)
-
+        #pos_x = self.get_position_encoding(x)
+        #x = x+pos_x
+        #x += self.get_position_encoding(x)
         res1 = x
 
         # for i in range(self.num_blocks):

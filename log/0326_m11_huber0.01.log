@@ -1,0 +1,453 @@
+srun: job 6023683 queued and waiting for resources
+srun: job 6023683 has been allocated resources
+Training configs: Namespace(INN=1, batch_size=8, dataset='PEMS08', decay_rate=0.5, device='cuda:0', dilation=1, dropout_rate=0.5, early_stop=False, epoch=60, evaluate=False, exponential_decay_step=5, finetune=False, head_size=16, hidden_size=1, horizon=12, input_dim=170, kernel=3, leakyrelu_rate=0.2, lr=0.001, lradj=1, multi_layer=5, norm_method='z_score', num_stacks=1, optimizer='N', share_weight=0, temp=0, test_length=2, train=True, train_length=6, valid_length=2, validate_freq=1, window_size=12)
+level number 3, level details: [[1, 1], [0, 0], [0, 0]]
+Parameters of need to grad is:7.689946 M
+[INFO] Register count_convNd() for <class 'torch.nn.modules.conv.Conv2d'>.
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.normalization.LayerNorm'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.loss.SmoothL1Loss'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.Splitting'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.padding.ReplicationPad1d'>. Treat it as zero Macs and zero Params.[00m
+[INFO] Register count_convNd() for <class 'torch.nn.modules.conv.Conv1d'>.
+[INFO] Register count_relu() for <class 'torch.nn.modules.activation.LeakyReLU'>.
+[INFO] Register zero_ops() for <class 'torch.nn.modules.dropout.Dropout'>.
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.activation.Tanh'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.container.Sequential'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.LiftingScheme'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.LiftingSchemeLevel'>. Treat it as zero Macs and zero Params.[00m
+[INFO] Register count_bn() for <class 'torch.nn.modules.batchnorm.BatchNorm1d'>.
+[INFO] Register zero_ops() for <class 'torch.nn.modules.activation.ReLU'>.
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.BottleneckBlock'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.LevelWASN'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'torch.nn.modules.container.ModuleList'>. Treat it as zero Macs and zero Params.[00m
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.EncoderTree'>. Treat it as zero Macs and zero Params.[00m
+[INFO] Register count_linear() for <class 'torch.nn.modules.linear.Linear'>.
+[INFO] Register count_adap_avgpool() for <class 'torch.nn.modules.pooling.AdaptiveAvgPool1d'>.
+[91m[WARN] Cannot find rule for <class 'models.StackTWaveNetTransformerEncoder.WASN'>. Treat it as zero Macs and zero Params.[00m
+MACs: 234.453M, Parameters: 4.172M
+Total Trainable Params: 7689946
+Updating learning rate to 0.0010526315789473684
+| end of epoch   0 | time: 107.27s | train_total_loss 0.4497, loss_F 0.2127, loss_M 0.2370  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.57; RMSE   29.32.
+RAW-Mid : MAE   18.82; RMSE   29.53.
+RAW : MAE   17.39; RMSE   26.90.
+RAW-Mid : MAE   18.06; RMSE   27.82.
+got best validation result: {'mae': 18.570370019828, 'rmse': 29.31617947911692} {'mae': 17.386334263669543, 'rmse': 26.901733591172874}
+Updating learning rate to 0.001
+| end of epoch   1 | time: 101.94s | train_total_loss 0.3535, loss_F 0.1733, loss_M 0.1802  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.63; RMSE   27.95.
+RAW-Mid : MAE   18.03; RMSE   28.44.
+RAW : MAE   16.80; RMSE   26.02.
+RAW-Mid : MAE   17.55; RMSE   27.06.
+got best validation result: {'mae': 17.627088241804028, 'rmse': 27.94888779079334} {'mae': 16.798752757122827, 'rmse': 26.017816306966285}
+Updating learning rate to 0.001
+| end of epoch   2 | time: 99.44s | train_total_loss 0.3437, loss_F 0.1685, loss_M 0.1752  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.76; RMSE   28.41.
+RAW-Mid : MAE   18.13; RMSE   28.65.
+RAW : MAE   16.70; RMSE   25.99.
+RAW-Mid : MAE   17.53; RMSE   27.03.
+Updating learning rate to 0.001
+| end of epoch   3 | time: 104.24s | train_total_loss 0.3380, loss_F 0.1654, loss_M 0.1726  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.30; RMSE   27.58.
+RAW-Mid : MAE   17.67; RMSE   28.00.
+RAW : MAE   16.56; RMSE   25.71.
+RAW-Mid : MAE   17.23; RMSE   26.66.
+got best validation result: {'mae': 17.29818684130335, 'rmse': 27.583662156987803} {'mae': 16.555281134421303, 'rmse': 25.708493490627646}
+Updating learning rate to 0.001
+| end of epoch   4 | time: 103.53s | train_total_loss 0.3351, loss_F 0.1637, loss_M 0.1714  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.35; RMSE   27.80.
+RAW-Mid : MAE   17.83; RMSE   28.38.
+RAW : MAE   16.61; RMSE   25.76.
+RAW-Mid : MAE   17.34; RMSE   26.88.
+Updating learning rate to 0.001
+| end of epoch   5 | time: 95.42s | train_total_loss 0.3322, loss_F 0.1622, loss_M 0.1700  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.76; RMSE   28.39.
+RAW-Mid : MAE   17.94; RMSE   28.36.
+RAW : MAE   17.05; RMSE   26.29.
+RAW-Mid : MAE   17.50; RMSE   26.91.
+Updating learning rate to 0.00095
+| end of epoch   6 | time: 95.28s | train_total_loss 0.3298, loss_F 0.1609, loss_M 0.1689  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.71; RMSE   28.19.
+RAW-Mid : MAE   17.71; RMSE   28.11.
+RAW : MAE   17.11; RMSE   26.30.
+RAW-Mid : MAE   17.22; RMSE   26.56.
+Updating learning rate to 0.00095
+| end of epoch   7 | time: 85.77s | train_total_loss 0.3287, loss_F 0.1604, loss_M 0.1683  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.66; RMSE   28.17.
+RAW-Mid : MAE   17.89; RMSE   28.41.
+RAW : MAE   16.83; RMSE   26.05.
+RAW-Mid : MAE   17.36; RMSE   26.78.
+Updating learning rate to 0.00095
+| end of epoch   8 | time: 97.18s | train_total_loss 0.3279, loss_F 0.1599, loss_M 0.1680  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.17; RMSE   27.57.
+RAW-Mid : MAE   17.82; RMSE   28.35.
+RAW : MAE   16.42; RMSE   25.49.
+RAW-Mid : MAE   17.31; RMSE   26.66.
+got best validation result: {'mae': 17.166897767089438, 'rmse': 27.572496465144216} {'mae': 16.418710819678264, 'rmse': 25.48846513366472}
+Updating learning rate to 0.00095
+| end of epoch   9 | time: 94.61s | train_total_loss 0.3258, loss_F 0.1588, loss_M 0.1670  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.35; RMSE   27.69.
+RAW-Mid : MAE   17.77; RMSE   28.25.
+RAW : MAE   16.76; RMSE   25.78.
+RAW-Mid : MAE   17.25; RMSE   26.59.
+Updating learning rate to 0.00095
+| end of epoch  10 | time: 87.28s | train_total_loss 0.3252, loss_F 0.1586, loss_M 0.1667  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.45; RMSE   27.89.
+RAW-Mid : MAE   17.74; RMSE   28.28.
+RAW : MAE   16.86; RMSE   25.98.
+RAW-Mid : MAE   17.14; RMSE   26.49.
+Updating learning rate to 0.0009025
+| end of epoch  11 | time: 88.51s | train_total_loss 0.3237, loss_F 0.1577, loss_M 0.1660  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.48; RMSE   27.97.
+RAW-Mid : MAE   17.98; RMSE   28.50.
+RAW : MAE   16.71; RMSE   25.89.
+RAW-Mid : MAE   17.37; RMSE   26.77.
+Updating learning rate to 0.0009025
+| end of epoch  12 | time: 87.45s | train_total_loss 0.3232, loss_F 0.1575, loss_M 0.1657  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.90; RMSE   28.60.
+RAW-Mid : MAE   18.24; RMSE   29.00.
+RAW : MAE   17.06; RMSE   26.36.
+RAW-Mid : MAE   17.54; RMSE   27.10.
+Updating learning rate to 0.0009025
+| end of epoch  13 | time: 95.66s | train_total_loss 0.3232, loss_F 0.1575, loss_M 0.1657  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.44; RMSE   27.90.
+RAW-Mid : MAE   17.76; RMSE   28.37.
+RAW : MAE   16.64; RMSE   25.64.
+RAW-Mid : MAE   17.04; RMSE   26.34.
+Updating learning rate to 0.0009025
+| end of epoch  14 | time: 87.09s | train_total_loss 0.3225, loss_F 0.1571, loss_M 0.1654  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.41; RMSE   28.03.
+RAW-Mid : MAE   17.87; RMSE   28.53.
+RAW : MAE   16.54; RMSE   25.68.
+RAW-Mid : MAE   17.07; RMSE   26.48.
+Updating learning rate to 0.0009025
+| end of epoch  15 | time: 91.01s | train_total_loss 0.3216, loss_F 0.1567, loss_M 0.1649  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.58; RMSE   28.15.
+RAW-Mid : MAE   18.16; RMSE   28.90.
+RAW : MAE   16.75; RMSE   26.02.
+RAW-Mid : MAE   17.43; RMSE   26.96.
+Updating learning rate to 0.000857375
+| end of epoch  16 | time: 91.89s | train_total_loss 0.3209, loss_F 0.1562, loss_M 0.1647  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.47; RMSE   27.96.
+RAW-Mid : MAE   18.07; RMSE   28.66.
+RAW : MAE   16.51; RMSE   25.65.
+RAW-Mid : MAE   17.22; RMSE   26.59.
+Updating learning rate to 0.000857375
+| end of epoch  17 | time: 95.43s | train_total_loss 0.3198, loss_F 0.1556, loss_M 0.1642  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.22; RMSE   27.72.
+RAW-Mid : MAE   17.77; RMSE   28.39.
+RAW : MAE   16.39; RMSE   25.46.
+RAW-Mid : MAE   17.05; RMSE   26.37.
+Updating learning rate to 0.000857375
+| end of epoch  18 | time: 96.20s | train_total_loss 0.3203, loss_F 0.1558, loss_M 0.1644  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.69; RMSE   28.38.
+RAW-Mid : MAE   18.07; RMSE   28.75.
+RAW : MAE   16.73; RMSE   25.98.
+RAW-Mid : MAE   17.23; RMSE   26.63.
+Updating learning rate to 0.000857375
+| end of epoch  19 | time: 91.75s | train_total_loss 0.3191, loss_F 0.1553, loss_M 0.1638  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.80; RMSE   28.35.
+RAW-Mid : MAE   18.25; RMSE   29.01.
+RAW : MAE   16.83; RMSE   26.06.
+RAW-Mid : MAE   17.32; RMSE   26.81.
+Updating learning rate to 0.000857375
+| end of epoch  20 | time: 95.36s | train_total_loss 0.3193, loss_F 0.1553, loss_M 0.1640  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.73; RMSE   28.41.
+RAW-Mid : MAE   18.06; RMSE   28.90.
+RAW : MAE   16.80; RMSE   25.93.
+RAW-Mid : MAE   17.18; RMSE   26.64.
+Updating learning rate to 0.0008145062499999999
+| end of epoch  21 | time: 91.29s | train_total_loss 0.3182, loss_F 0.1548, loss_M 0.1634  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.42; RMSE   27.97.
+RAW-Mid : MAE   17.91; RMSE   28.55.
+RAW : MAE   16.52; RMSE   25.57.
+RAW-Mid : MAE   17.04; RMSE   26.32.
+Updating learning rate to 0.0008145062499999999
+| end of epoch  22 | time: 96.08s | train_total_loss 0.3177, loss_F 0.1546, loss_M 0.1631  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.81; RMSE   28.48.
+RAW-Mid : MAE   18.15; RMSE   29.16.
+RAW : MAE   16.51; RMSE   25.65.
+RAW-Mid : MAE   16.97; RMSE   26.37.
+Updating learning rate to 0.0008145062499999999
+| end of epoch  23 | time: 91.53s | train_total_loss 0.3178, loss_F 0.1546, loss_M 0.1633  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.51; RMSE   28.22.
+RAW-Mid : MAE   18.10; RMSE   28.90.
+RAW : MAE   16.50; RMSE   25.76.
+RAW-Mid : MAE   17.28; RMSE   26.70.
+Updating learning rate to 0.0008145062499999999
+| end of epoch  24 | time: 90.55s | train_total_loss 0.3173, loss_F 0.1543, loss_M 0.1631  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.22; RMSE   27.80.
+RAW-Mid : MAE   17.74; RMSE   28.56.
+RAW : MAE   16.31; RMSE   25.46.
+RAW-Mid : MAE   16.85; RMSE   26.25.
+Updating learning rate to 0.0008145062499999999
+| end of epoch  25 | time: 94.26s | train_total_loss 0.3169, loss_F 0.1542, loss_M 0.1627  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.65; RMSE   28.25.
+RAW-Mid : MAE   18.19; RMSE   29.19.
+RAW : MAE   16.77; RMSE   25.72.
+RAW-Mid : MAE   17.16; RMSE   26.59.
+Updating learning rate to 0.0007737809374999998
+| end of epoch  26 | time: 94.59s | train_total_loss 0.3160, loss_F 0.1537, loss_M 0.1623  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.58; RMSE   28.33.
+RAW-Mid : MAE   18.10; RMSE   29.17.
+RAW : MAE   16.51; RMSE   25.71.
+RAW-Mid : MAE   17.07; RMSE   26.55.
+Updating learning rate to 0.0007737809374999998
+| end of epoch  27 | time: 91.21s | train_total_loss 0.3158, loss_F 0.1535, loss_M 0.1622  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.77; RMSE   28.38.
+RAW-Mid : MAE   18.16; RMSE   28.93.
+RAW : MAE   16.68; RMSE   25.84.
+RAW-Mid : MAE   17.21; RMSE   26.68.
+Updating learning rate to 0.0007737809374999998
+| end of epoch  28 | time: 93.00s | train_total_loss 0.3158, loss_F 0.1536, loss_M 0.1622  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.84; RMSE   28.50.
+RAW-Mid : MAE   18.31; RMSE   29.23.
+RAW : MAE   16.91; RMSE   26.11.
+RAW-Mid : MAE   17.29; RMSE   26.67.
+Updating learning rate to 0.0007737809374999998
+| end of epoch  29 | time: 90.91s | train_total_loss 0.3152, loss_F 0.1532, loss_M 0.1620  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.84; RMSE   28.71.
+RAW-Mid : MAE   18.12; RMSE   29.07.
+RAW : MAE   16.78; RMSE   26.04.
+RAW-Mid : MAE   17.13; RMSE   26.63.
+Updating learning rate to 0.0007737809374999998
+| end of epoch  30 | time: 99.20s | train_total_loss 0.3151, loss_F 0.1532, loss_M 0.1619  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.46; RMSE   28.09.
+RAW-Mid : MAE   17.83; RMSE   28.58.
+RAW : MAE   16.47; RMSE   25.65.
+RAW-Mid : MAE   16.98; RMSE   26.46.
+Updating learning rate to 0.0007350918906249999
+| end of epoch  31 | time: 88.52s | train_total_loss 0.3139, loss_F 0.1526, loss_M 0.1613  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.84; RMSE   28.81.
+RAW-Mid : MAE   18.19; RMSE   29.32.
+RAW : MAE   16.69; RMSE   25.90.
+RAW-Mid : MAE   17.11; RMSE   26.58.
+Updating learning rate to 0.0007350918906249999
+| end of epoch  32 | time: 92.88s | train_total_loss 0.3139, loss_F 0.1526, loss_M 0.1613  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.54; RMSE   28.37.
+RAW-Mid : MAE   17.98; RMSE   28.83.
+RAW : MAE   16.39; RMSE   25.65.
+RAW-Mid : MAE   17.00; RMSE   26.48.
+Updating learning rate to 0.0007350918906249999
+| end of epoch  33 | time: 94.69s | train_total_loss 0.3142, loss_F 0.1527, loss_M 0.1614  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.30; RMSE   29.33.
+RAW-Mid : MAE   18.21; RMSE   28.97.
+RAW : MAE   17.39; RMSE   26.84.
+RAW-Mid : MAE   17.39; RMSE   26.83.
+Updating learning rate to 0.0007350918906249999
+| end of epoch  34 | time: 91.30s | train_total_loss 0.3136, loss_F 0.1523, loss_M 0.1613  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.09; RMSE   29.07.
+RAW-Mid : MAE   18.60; RMSE   29.85.
+RAW : MAE   16.72; RMSE   25.84.
+RAW-Mid : MAE   17.43; RMSE   26.73.
+Updating learning rate to 0.0007350918906249999
+| end of epoch  35 | time: 92.53s | train_total_loss 0.3136, loss_F 0.1523, loss_M 0.1613  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.61; RMSE   28.60.
+RAW-Mid : MAE   18.11; RMSE   29.40.
+RAW : MAE   16.31; RMSE   25.50.
+RAW-Mid : MAE   16.92; RMSE   26.31.
+Updating learning rate to 0.0006983372960937497
+| end of epoch  36 | time: 95.75s | train_total_loss 0.3126, loss_F 0.1519, loss_M 0.1608  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.57; RMSE   28.40.
+RAW-Mid : MAE   18.07; RMSE   29.01.
+RAW : MAE   16.43; RMSE   25.59.
+RAW-Mid : MAE   17.00; RMSE   26.40.
+Updating learning rate to 0.0006983372960937497
+| end of epoch  37 | time: 93.92s | train_total_loss 0.3122, loss_F 0.1516, loss_M 0.1606  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.87; RMSE   28.85.
+RAW-Mid : MAE   18.29; RMSE   29.39.
+RAW : MAE   16.83; RMSE   26.13.
+RAW-Mid : MAE   17.19; RMSE   26.68.
+Updating learning rate to 0.0006983372960937497
+| end of epoch  38 | time: 94.09s | train_total_loss 0.3123, loss_F 0.1517, loss_M 0.1606  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.94; RMSE   29.03.
+RAW-Mid : MAE   18.23; RMSE   29.54.
+RAW : MAE   16.79; RMSE   26.12.
+RAW-Mid : MAE   17.05; RMSE   26.57.
+Updating learning rate to 0.0006983372960937497
+| end of epoch  39 | time: 89.75s | train_total_loss 0.3121, loss_F 0.1515, loss_M 0.1606  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.99; RMSE   29.01.
+RAW-Mid : MAE   18.45; RMSE   29.65.
+RAW : MAE   16.89; RMSE   26.20.
+RAW-Mid : MAE   17.31; RMSE   26.83.
+Updating learning rate to 0.0006983372960937497
+| end of epoch  40 | time: 91.35s | train_total_loss 0.3116, loss_F 0.1513, loss_M 0.1602  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.98; RMSE   28.91.
+RAW-Mid : MAE   18.31; RMSE   29.41.
+RAW : MAE   17.02; RMSE   26.32.
+RAW-Mid : MAE   17.29; RMSE   26.75.
+Updating learning rate to 0.0006634204312890623
+| end of epoch  41 | time: 93.13s | train_total_loss 0.3111, loss_F 0.1510, loss_M 0.1601  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.88; RMSE   28.92.
+RAW-Mid : MAE   18.43; RMSE   29.90.
+RAW : MAE   16.87; RMSE   26.16.
+RAW-Mid : MAE   17.37; RMSE   26.88.
+Updating learning rate to 0.0006634204312890623
+| end of epoch  42 | time: 93.39s | train_total_loss 0.3109, loss_F 0.1509, loss_M 0.1600  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.78; RMSE   28.84.
+RAW-Mid : MAE   18.18; RMSE   29.31.
+RAW : MAE   16.64; RMSE   25.90.
+RAW-Mid : MAE   17.08; RMSE   26.50.
+Updating learning rate to 0.0006634204312890623
+| end of epoch  43 | time: 92.08s | train_total_loss 0.3108, loss_F 0.1510, loss_M 0.1598  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.01; RMSE   28.95.
+RAW-Mid : MAE   18.30; RMSE   29.55.
+RAW : MAE   16.92; RMSE   26.15.
+RAW-Mid : MAE   17.21; RMSE   26.69.
+Updating learning rate to 0.0006634204312890623
+| end of epoch  44 | time: 99.73s | train_total_loss 0.3111, loss_F 0.1510, loss_M 0.1601  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.70; RMSE   28.62.
+RAW-Mid : MAE   18.20; RMSE   29.37.
+RAW : MAE   16.64; RMSE   25.80.
+RAW-Mid : MAE   17.10; RMSE   26.53.
+Updating learning rate to 0.0006634204312890623
+| end of epoch  45 | time: 99.15s | train_total_loss 0.3108, loss_F 0.1510, loss_M 0.1598  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.79; RMSE   28.83.
+RAW-Mid : MAE   18.31; RMSE   29.64.
+RAW : MAE   16.77; RMSE   26.14.
+RAW-Mid : MAE   17.14; RMSE   26.69.
+Updating learning rate to 0.0006302494097246091
+| end of epoch  46 | time: 92.10s | train_total_loss 0.3099, loss_F 0.1506, loss_M 0.1593  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.98; RMSE   29.17.
+RAW-Mid : MAE   18.58; RMSE   30.11.
+RAW : MAE   16.80; RMSE   26.07.
+RAW-Mid : MAE   17.27; RMSE   26.81.
+Updating learning rate to 0.0006302494097246091
+| end of epoch  47 | time: 96.92s | train_total_loss 0.3093, loss_F 0.1501, loss_M 0.1592  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.10; RMSE   29.34.
+RAW-Mid : MAE   18.67; RMSE   30.42.
+RAW : MAE   16.82; RMSE   26.11.
+RAW-Mid : MAE   17.30; RMSE   26.90.
+Updating learning rate to 0.0006302494097246091
+| end of epoch  48 | time: 91.95s | train_total_loss 0.3093, loss_F 0.1502, loss_M 0.1592  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.09; RMSE   29.70.
+RAW-Mid : MAE   18.99; RMSE   31.66.
+RAW : MAE   16.85; RMSE   26.31.
+RAW-Mid : MAE   17.45; RMSE   27.34.
+Updating learning rate to 0.0006302494097246091
+| end of epoch  49 | time: 92.67s | train_total_loss 0.3090, loss_F 0.1499, loss_M 0.1591  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.77; RMSE   28.99.
+RAW-Mid : MAE   18.57; RMSE   30.34.
+RAW : MAE   16.62; RMSE   25.98.
+RAW-Mid : MAE   17.21; RMSE   26.81.
+Updating learning rate to 0.0006302494097246091
+| end of epoch  50 | time: 88.30s | train_total_loss 0.3091, loss_F 0.1500, loss_M 0.1591  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.28; RMSE   29.41.
+RAW-Mid : MAE   18.62; RMSE   30.19.
+RAW : MAE   17.09; RMSE   26.43.
+RAW-Mid : MAE   17.46; RMSE   27.11.
+Updating learning rate to 0.0005987369392383787
+| end of epoch  51 | time: 98.37s | train_total_loss 0.3084, loss_F 0.1497, loss_M 0.1587  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.90; RMSE   28.94.
+RAW-Mid : MAE   18.23; RMSE   29.50.
+RAW : MAE   16.75; RMSE   26.05.
+RAW-Mid : MAE   17.23; RMSE   26.80.
+Updating learning rate to 0.0005987369392383787
+| end of epoch  52 | time: 92.24s | train_total_loss 0.3083, loss_F 0.1496, loss_M 0.1586  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.32; RMSE   29.67.
+RAW-Mid : MAE   18.80; RMSE   30.98.
+RAW : MAE   17.15; RMSE   26.42.
+RAW-Mid : MAE   17.46; RMSE   27.01.
+Updating learning rate to 0.0005987369392383787
+| end of epoch  53 | time: 93.11s | train_total_loss 0.3082, loss_F 0.1496, loss_M 0.1587  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.91; RMSE   29.06.
+RAW-Mid : MAE   18.40; RMSE   29.91.
+RAW : MAE   16.66; RMSE   25.99.
+RAW-Mid : MAE   17.18; RMSE   26.81.
+Updating learning rate to 0.0005987369392383787
+| end of epoch  54 | time: 93.29s | train_total_loss 0.3080, loss_F 0.1494, loss_M 0.1586  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.74; RMSE   28.82.
+RAW-Mid : MAE   18.33; RMSE   29.83.
+RAW : MAE   16.64; RMSE   25.88.
+RAW-Mid : MAE   17.14; RMSE   26.69.
+Updating learning rate to 0.0005987369392383787
+| end of epoch  55 | time: 88.44s | train_total_loss 0.3081, loss_F 0.1495, loss_M 0.1585  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.31; RMSE   29.29.
+RAW-Mid : MAE   18.45; RMSE   29.66.
+RAW : MAE   17.31; RMSE   26.63.
+RAW-Mid : MAE   17.44; RMSE   26.92.
+Updating learning rate to 0.0005688000922764596
+| end of epoch  56 | time: 91.42s | train_total_loss 0.3076, loss_F 0.1493, loss_M 0.1583  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.02; RMSE   29.22.
+RAW-Mid : MAE   18.53; RMSE   30.37.
+RAW : MAE   16.78; RMSE   26.18.
+RAW-Mid : MAE   17.27; RMSE   26.95.
+Updating learning rate to 0.0005688000922764596
+| end of epoch  57 | time: 92.65s | train_total_loss 0.3071, loss_F 0.1490, loss_M 0.1582  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.96; RMSE   29.23.
+RAW-Mid : MAE   18.54; RMSE   30.42.
+RAW : MAE   16.74; RMSE   26.13.
+RAW-Mid : MAE   17.20; RMSE   26.92.
+Updating learning rate to 0.0005688000922764596
+| end of epoch  58 | time: 90.62s | train_total_loss 0.3072, loss_F 0.1490, loss_M 0.1582  
+------ validate on data: VALIDATE ------
+RAW : MAE   18.46; RMSE   30.00.
+RAW-Mid : MAE   19.01; RMSE   31.26.
+RAW : MAE   17.14; RMSE   26.71.
+RAW-Mid : MAE   17.66; RMSE   27.75.
+Updating learning rate to 0.0005688000922764596
+| end of epoch  59 | time: 91.00s | train_total_loss 0.3071, loss_F 0.1490, loss_M 0.1582  
+------ validate on data: VALIDATE ------
+RAW : MAE   17.93; RMSE   29.03.
+RAW-Mid : MAE   18.49; RMSE   30.14.
+RAW : MAE   16.79; RMSE   26.12.
+RAW-Mid : MAE   17.36; RMSE   27.04.
+Training took 111.76909243265787 minutes

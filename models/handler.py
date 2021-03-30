@@ -220,7 +220,10 @@ def train(train_data, valid_data, test_data, args, result_file):
     if args.optimizer == 'RMSProp':
         my_optim = torch.optim.RMSprop(params=model.parameters(), lr=args.lr, eps=1e-08)
     else:
-        my_optim = torch.optim.Adam(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999))
+        print('nnnnnnnn')
+        my_optim = torch.optim.Adam(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=args.weight_decay)
+        # my_optim = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
+
     my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=my_optim, gamma=args.decay_rate)
 
     train_set = ForecastDataset(train_data, window_size=args.window_size, horizon=args.horizon,

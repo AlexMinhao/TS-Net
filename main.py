@@ -6,6 +6,7 @@ from models.handler import train, test,retrain
 import argparse
 import pandas as pd
 import numpy as np
+from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train', type=bool, default=True)
@@ -74,11 +75,11 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-
+    writer = SummaryWriter('./run')
     if args.train:
         try:
             before_train = datetime.now().timestamp()
-            _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file)
+            _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
             after_train = datetime.now().timestamp()
             print(f'Training took {(after_train - before_train) / 60} minutes')
         except KeyboardInterrupt:

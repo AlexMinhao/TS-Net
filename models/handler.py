@@ -83,8 +83,8 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
     return np.concatenate(forecast_set, axis=0), np.concatenate(target_set, axis=0),np.concatenate(Mid_set, axis=0), np.concatenate(input_set, axis=0),
 
 
-def validate(model, forecast_loss, dataloader, device, normalize_method, statistic,
-             node_cnt, window_size, horizon,
+def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, statistic,
+             node_cnt, window_size, horizon, writer,
              result_file=None,test=False):
     start = datetime.now()
 
@@ -100,6 +100,7 @@ def validate(model, forecast_loss, dataloader, device, normalize_method, statist
         forecast, target, mid = forecast_norm, target_norm, mid_norm
         forecast, target, mid, input = forecast_norm, target_norm, mid_norm, input_norm
 
+
     # score = evaluate(target, forecast)
     score = evaluate(target, forecast)
     score1 = evaluate(target, mid)
@@ -111,9 +112,18 @@ def validate(model, forecast_loss, dataloader, device, normalize_method, statist
     if test:
         print(f'TEST: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
         print(f'TEST: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+        writer.add_scalar('Test MAE_final', score[1], global_step=epoch)
+        writer.add_scalar('Test MAE_Mid', score1[1], global_step=epoch)
+        writer.add_scalar('Test RMSE_final', score[2], global_step=epoch)
+        writer.add_scalar('Test RMSE_Mid', score1[2], global_step=epoch)
+
     else:
         print(f'VAL: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
         print(f'VAL: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+        writer.add_scalar('VAL MAE_final', score[1], global_step=epoch)
+        writer.add_scalar('VAL MAE_Mid', score1[1], global_step=epoch)
+        writer.add_scalar('VAL RMSE_final', score[2], global_step=epoch)
+        writer.add_scalar('VAL RMSE_Mid', score1[2], global_step=epoch)
 
     if result_file:
         if not os.path.exists(result_file):
@@ -177,7 +187,7 @@ def adjust_learning_rate(optimizer, epoch, args):
             param_group['lr'] = lr
         print('Updating learning rate to {}'.format(lr))
 
-def train(train_data, valid_data, test_data, args, result_file):
+def train(train_data, valid_data, test_data, args, result_file, writer):
     node_cnt = train_data.shape[1]
     model = Model(node_cnt, 2, args.window_size, args.multi_layer, horizon=args.horizon)
     # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
@@ -281,8 +291,14 @@ def train(train_data, valid_data, test_data, args, result_file):
             loss_total_F  += float(loss_F)
             loss_total_M  += float(loss_M)
 
+
         print('| end of epoch {:3d} | time: {:5.2f}s | train_total_loss {:5.4f}, loss_F {:5.4f}, loss_M {:5.4f}  '.format(epoch, (
                 time.time() - epoch_start_time), loss_total / cnt, loss_total_F / cnt, loss_total_M / cnt))
+
+        writer.add_scalar('Train_loss_tatal', loss_total / cnt, global_step=epoch)
+        writer.add_scalar('Train_loss_Mid', loss_total_F / cnt, global_step=epoch)
+        writer.add_scalar('Train_loss_Final', loss_total_M / cnt, global_step=epoch)
+
         # save_model(model, result_file, epoch)
         if (epoch+1) % args.exponential_decay_step == 0:
             my_lr_scheduler.step()
@@ -290,12 +306,12 @@ def train(train_data, valid_data, test_data, args, result_file):
             is_best_for_now = False
             print('------ validate on data: VALIDATE ------')
             performance_metrics = \
-                validate(model, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
+                validate(model, epoch, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
-                         result_file=None, test=False)
-            test_metrics=validate(model, forecast_loss, test_loader, args.device, args.norm_method, normalize_statistic,
+                         writer, result_file=None, test=False)
+            test_metrics=validate(model, epoch,  forecast_loss, test_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
-                         result_file=None, test=True)
+                         writer, result_file=None, test=True)
             if best_validate_mae > performance_metrics['mae']:
                 best_validate_mae = performance_metrics['mae']
                 is_best_for_now = True

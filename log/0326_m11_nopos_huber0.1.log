@@ -209,3 +209,10 @@ RAW-Mid : MAE   20.42; RMSE   32.55.
 RAW : MAE   18.58; RMSE   28.37.
 RAW-Mid : MAE   18.42; RMSE   28.53.
 Updating learning rate to 0.0007737809374999998
+| end of epoch  26 | time: 98.99s | train_total_loss 0.2515, loss_F 0.1186, loss_M 0.1328  
+------ validate on data: VALIDATE ------
+RAW : MAE   20.46; RMSE   32.56.
+RAW-Mid : MAE   20.38; RMSE   32.48.
+RAW : MAE   18.41; RMSE   28.33.
+RAW-Mid : MAE   18.65; RMSE   28.94.
+Updating learning rate to 0.0007737809374999998

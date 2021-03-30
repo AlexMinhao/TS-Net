@@ -109,8 +109,8 @@ def validate(model, forecast_loss, dataloader, device, normalize_method, statist
 
 
 
-    print(f'RAW : MAE {score[0]:7.2f}; RMSE {score[1]:7.2f}.')
-    print(f'RAW-Mid : MAE {score1[0]:7.2f}; RMSE {score1[1]:7.2f}.')
+    print(f'RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
+    print(f'RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
 
     if result_file:
         if not os.path.exists(result_file):
@@ -126,7 +126,7 @@ def validate(model, forecast_loss, dataloader, device, normalize_method, statist
         np.savetxt(f'{result_file}/predict_ape.csv',
                    np.abs((forcasting_2d - forcasting_2d_target) / forcasting_2d_target), delimiter=",")
 
-    return dict(mae=score[0], rmse=score[1])
+    return dict(mae=score[1], rmse=score[2])
 
 
 def adjust_learning_rate(optimizer, epoch, args):

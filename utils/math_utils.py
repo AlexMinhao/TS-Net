@@ -2,6 +2,26 @@ import numpy as np
 import torch
 
 
+def MAPE(v, v_, axis=None):
+    '''
+    Mean absolute percentage error.
+    :param v: np.ndarray or int, ground truth.
+    :param v_: np.ndarray or int, prediction.
+    :param axis: axis to do calculation.
+    :return: int, MAPE averages on all elements of input.
+    '''
+    mape = (np.abs(v_ - v) / np.abs(v) + 1e-5).astype(np.float64)
+    mape = np.where(mape > 5, 0, mape)
+    return np.mean(mape, axis)
+
+
+#
+# def MAPE_np(pred, true, mask_value=None):
+#     if mask_value != None:
+#         mask = np.where(true > (mask_value), True, False)
+#         true = true[mask]
+#         pred = pred[mask]
+#     return np.mean(np.absolute(np.divide((true - pred), true)))
 
 
 def RMSE(v, v_, axis=None):
@@ -35,13 +55,13 @@ def evaluate(y, y_hat, by_step=False, by_node=False):
     :return: array of mape, mae and rmse.
     '''
     if not by_step and not by_node:
-        return MAE(y, y_hat), RMSE(y, y_hat)
+        return MAPE(y, y_hat), MAE(y, y_hat), RMSE(y, y_hat)
     if by_step and by_node:
-        return MAE(y, y_hat, axis=0), RMSE(y, y_hat, axis=0)
+        return MAPE(y, y_hat, axis=0), MAE(y, y_hat, axis=0), RMSE(y, y_hat, axis=0)
     if by_step:
-        return MAE(y, y_hat, axis=(0, 2)), RMSE(y, y_hat, axis=(0, 2))
+        return MAPE(y, y_hat, axis=(0, 2)), MAE(y, y_hat, axis=(0, 2)), RMSE(y, y_hat, axis=(0, 2))
     if by_node:
-        return MAE(y, y_hat, axis=(0, 1)), RMSE(y, y_hat, axis=(0, 1))
+        return MAPE(y, y_hat, axis=(0, 1)), MAE(y, y_hat, axis=(0, 1)), RMSE(y, y_hat, axis=(0, 1))
 
 
 

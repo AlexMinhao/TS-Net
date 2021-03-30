@@ -85,7 +85,7 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
 
 def validate(model, forecast_loss, dataloader, device, normalize_method, statistic,
              node_cnt, window_size, horizon,
-             result_file=None):
+             result_file=None,test=False):
     start = datetime.now()
 
     forecast_norm, target_norm, mid_norm, input_norm = inference(model, dataloader, device,
@@ -108,9 +108,12 @@ def validate(model, forecast_loss, dataloader, device, normalize_method, statist
     end = datetime.now()
 
 
-
-    print(f'RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
-    print(f'RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+    if test:
+        print(f'TEST: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
+        print(f'TEST: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+    else:
+        print(f'VAL: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
+        print(f'VAL: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
 
     if result_file:
         if not os.path.exists(result_file):
@@ -243,7 +246,9 @@ def train(train_data, valid_data, test_data, args, result_file):
     print(f"Total Trainable Params: {total_params}")
 
     best_validate_mae = np.inf
+    best_test_mae = np.inf
     validate_score_non_decrease_count = 0
+
     performance_metrics = {}
     for epoch in range(args.epoch):
 
@@ -262,7 +267,7 @@ def train(train_data, valid_data, test_data, args, result_file):
             # loss = forecast_loss(forecast, target) + forecast_loss(res, target)
             # loss1 = forecast_loss(forecast, target)
             # loss2 = forecast_loss(res, target)
-            beta = 0.01 #for the threshold of the smooth L1 loss
+            beta = 0.1 #for the threshold of the smooth L1 loss
             loss = forecast_loss(forecast, target, beta) + forecast_loss(res, target, beta)
             loss_F = forecast_loss(forecast, target, beta)
             loss_M = forecast_loss(res, target, beta)
@@ -284,17 +289,21 @@ def train(train_data, valid_data, test_data, args, result_file):
             performance_metrics = \
                 validate(model, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
-                         result_file=None)
+                         result_file=None, test=False)
             test_metrics=validate(model, forecast_loss, test_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
-                         result_file=None)
+                         result_file=None, test=True)
             if best_validate_mae > performance_metrics['mae']:
                 best_validate_mae = performance_metrics['mae']
                 is_best_for_now = True
                 validate_score_non_decrease_count = 0
-                print('got best validation/val result:',performance_metrics, test_metrics)
+                print('got best validation result:',performance_metrics, test_metrics)
             else:
                 validate_score_non_decrease_count += 1
+            if best_test_mae > test_metrics['mae']:
+                best_test_mae = test_metrics['mae']
+                print('got best test result:', test_metrics)
+                
             # save model
             # if is_best_for_now:
             #     save_model(model, result_file)
@@ -396,7 +405,7 @@ def retrain(train_data, valid_data, args, result_file, epoch):
             performance_metrics = \
                 validate(model, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
-                         result_file=result_file)
+                         result_file=result_file,test=False)
             if best_validate_mae > performance_metrics['mae']:
                 best_validate_mae = performance_metrics['mae']
                 is_best_for_now = True

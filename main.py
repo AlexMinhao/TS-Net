@@ -32,7 +32,7 @@ parser.add_argument('--decay_rate', type=float, default=0.5)
 parser.add_argument('--dropout_rate', type=float, default=0.5)
 parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
 parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
-parser.add_argument('--weight_decay', type=float, default=0.0)
+parser.add_argument('--weight_decay', type=float, default=1e-5)
 # Action Part
 
 parser.add_argument('--input_dim', type=int, default=170)################

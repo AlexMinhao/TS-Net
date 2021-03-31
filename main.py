@@ -75,7 +75,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run')
+    writer = SummaryWriter('./run/exp1')
     if args.train:
         try:
             before_train = datetime.now().timestamp()

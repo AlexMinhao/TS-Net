@@ -33,6 +33,7 @@ parser.add_argument('--dropout_rate', type=float, default=0.5)
 parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
 parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
+parser.add_argument('--model_name', type=str, default='base')
 # Action Part
 
 parser.add_argument('--input_dim', type=int, default=170)################
@@ -75,7 +76,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/exp1')
+    writer = SummaryWriter('./run/{}'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()

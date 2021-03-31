@@ -23,7 +23,7 @@ parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--multi_layer', type=int, default=5)
 parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--validate_freq', type=int, default=1)
-parser.add_argument('--batch_size', type=int, default=128)
+parser.add_argument('--batch_size', type=int, default=8)
 parser.add_argument('--norm_method', type=str, default='z_score')
 parser.add_argument('--optimizer', type=str, default='N') #
 parser.add_argument('--early_stop', type=bool, default=False)
@@ -32,6 +32,8 @@ parser.add_argument('--decay_rate', type=float, default=0.5)
 parser.add_argument('--dropout_rate', type=float, default=0.5)
 parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
 parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
+parser.add_argument('--weight_decay', type=float, default=1e-5)
+parser.add_argument('--model_name', type=str, default='base')
 # Action Part
 
 parser.add_argument('--input_dim', type=int, default=170)################
@@ -74,7 +76,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/exp1')
+    writer = SummaryWriter('./run/{}'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()

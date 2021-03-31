@@ -145,7 +145,7 @@ def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, 
 def adjust_learning_rate(optimizer, epoch, args):
     # lr = args.learning_rate * (0.2 ** (epoch // 2))
     if args.lradj== 1:
-        lr_adjust = {epoch: args.lr * (0.95 ** ((epoch-1) // 5))}
+        lr_adjust = {epoch: args.lr * (0.95 ** ((epoch-1) // 1))}
     elif args.lradj==2:
         # lr_adjust = {
         #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
@@ -181,6 +181,26 @@ def adjust_learning_rate(optimizer, epoch, args):
         lr_adjust = {
             40: 0.0001, 60: 0.00005
         }
+    elif args.lradj==6:
+        # lr_adjust = {
+        #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+        #     10: 5e-7, 15: 1e-7, 20: 5e-8
+        # }
+        lr_adjust = {
+            0: 0.0001, 5: 0.0005, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
+            , 70: 0.000001
+        }
+    elif args.lradj==7:
+        # lr_adjust = {
+        #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+        #     10: 5e-7, 15: 1e-7, 20: 5e-8
+        # }
+        lr_adjust = {
+            10: 0.0001, 30: 0.00005, 50: 0.00001
+            , 70: 0.000001
+        }
+
+
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
         for param_group in optimizer.param_groups:
@@ -230,7 +250,9 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
     if args.optimizer == 'RMSProp':
         my_optim = torch.optim.RMSprop(params=model.parameters(), lr=args.lr, eps=1e-08)
     else:
-        my_optim = torch.optim.Adam(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999))
+        my_optim = torch.optim.Adam(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999), weight_decay=args.weight_decay)
+        # my_optim = torch.optim.AdamW(params=model.parameters(), lr=args.lr) 
+
     my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=my_optim, gamma=args.decay_rate)
 
     train_set = ForecastDataset(train_data, window_size=args.window_size, horizon=args.horizon,

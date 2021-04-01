@@ -190,6 +190,16 @@ def adjust_learning_rate(optimizer, epoch, args):
             0: 0.0001, 5: 0.0005, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
             , 70: 0.000001
         }
+    elif args.lradj==61:
+        # lr_adjust = {
+        #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+        #     10: 5e-7, 15: 1e-7, 20: 5e-8
+        # }
+        lr_adjust = {
+            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 45: 0.00001
+            , 70: 0.000001
+        }
+
     elif args.lradj==7:
         # lr_adjust = {
         #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
@@ -200,6 +210,24 @@ def adjust_learning_rate(optimizer, epoch, args):
             , 70: 0.000001
         }
 
+    elif args.lradj==8:
+        # lr_adjust = {
+        #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+        #     10: 5e-7, 15: 1e-7, 20: 5e-8
+        # }
+        lr_adjust = {
+            0: 0.0005, 5: 0.0008, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
+            , 70: 0.000001
+        }
+    elif args.lradj==9:
+        # lr_adjust = {
+        #     2: 5e-5, 4: 1e-5, 6: 5e-6, 8: 1e-6,
+        #     10: 5e-7, 15: 1e-7, 20: 5e-8
+        # }
+        lr_adjust = {
+            0: 0.0001, 10: 0.0005, 20:0.001, 40: 0.0001, 45: 0.00005, 50: 0.00001
+            , 70: 0.000001
+        }
 
     if epoch in lr_adjust.keys():
         lr = lr_adjust[epoch]
@@ -223,7 +251,7 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
                       haar_wavelet=False)
 
     print('Parameters of need to grad is:{} M'.format(count_params(model) / 1000000.0))
-    in1 = torch.randn(8,12,170)
+    in1 = torch.randn(args.batch_size, args.window_size, args.input_dim)
     flops, params = profile(model, inputs=(in1, ))
     macs, params = clever_format([flops, params], "%.3f")
     print('MACs: {}, Parameters: {}'.format(macs, params))
@@ -266,10 +294,10 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
     valid_loader = torch_data.DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
     test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
 
-#    forecast_loss = nn.MSELoss(reduction='mean').to(args.device)
-    #forecast_loss = nn.L1Loss().to(args.device)
+    #forecast_loss = nn.MSELoss(reduction='mean').to(args.device)
+    forecast_loss = nn.L1Loss().to(args.device)
 #    forecast_loss = nn.SmoothL1Loss().to(args.device)
-    forecast_loss =  smooth_l1_loss
+#    forecast_loss =  smooth_l1_loss
     total_params = 0
     for name, parameter in model.named_parameters():
         if not parameter.requires_grad: continue
@@ -296,13 +324,13 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
             target = target.to(args.device)  # torch.Size([32, 3, 228])
             model.zero_grad()
             forecast, res = model(inputs)
-            # loss = forecast_loss(forecast, target) + forecast_loss(res, target)
-            # loss1 = forecast_loss(forecast, target)
-            # loss2 = forecast_loss(res, target)
-            beta = 0.1 #for the threshold of the smooth L1 loss
-            loss = forecast_loss(forecast, target, beta) + forecast_loss(res, target, beta)
-            loss_F = forecast_loss(forecast, target, beta)
-            loss_M = forecast_loss(res, target, beta)
+            loss = forecast_loss(forecast, target) + forecast_loss(res, target)
+            loss_F = forecast_loss(forecast, target)
+            loss_M = forecast_loss(res, target)
+            #beta = 0.1 #for the threshold of the smooth L1 loss
+            #loss = forecast_loss(forecast, target, beta) + forecast_loss(res, target, beta)
+            #loss_F = forecast_loss(forecast, target, beta)
+            #loss_M = forecast_loss(res, target, beta)
             cnt += 1
             loss.backward()
             my_optim.step()

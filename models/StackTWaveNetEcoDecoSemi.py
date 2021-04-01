@@ -476,7 +476,7 @@ class WASN(nn.Module):
         self.projection1 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection2 = nn.Conv1d(2*args.window_size, num_classes,
+        self.projection2 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
         self.projection3 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
@@ -520,22 +520,10 @@ class WASN(nn.Module):
 
         x = self.projection1(x)
         MidOutPut = x
-        #######################################################
 
-        # x = torch.cat((res1,x),dim = 1)
-        #
-        #
-        # x = self.blocks1(x, attn_mask=None) #torch.Size([32, 24, 170])
-        #
-        # x[:,12:,:] = x[:,12:,:] + res2
-        # # x += res3
-        # x = self.projection2(x[:,12:,:])
 
-        ##########################################################
-        x = torch.cat((res1, x), dim=1)
-        res3 = x
         x = self.blocks2(x, attn_mask=None)
-        x += res3
+        x += MidOutPut
         x = self.projection2(x)
         return x, MidOutPut
 

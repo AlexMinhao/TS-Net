@@ -2,7 +2,7 @@ import os
 import torch
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
-from models.handler import train, test,retrain
+from models.handler import train, trainSemi, test,retrain
 import argparse
 import pandas as pd
 import numpy as np
@@ -33,7 +33,7 @@ parser.add_argument('--dropout_rate', type=float, default=0.5)
 parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
 parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
-parser.add_argument('--model_name', type=str, default='base')
+parser.add_argument('--model_name', type=str, default='Semi')
 # Action Part
 
 parser.add_argument('--input_dim', type=int, default=170)################
@@ -80,9 +80,14 @@ if __name__ == '__main__':
     if args.train:
         try:
             before_train = datetime.now().timestamp()
-            _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
-            after_train = datetime.now().timestamp()
-            print(f'Training took {(after_train - before_train) / 60} minutes')
+            if args.model_name == "Semi":
+                _, normalize_statistic = trainSemi(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
+            else:
+                _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
         except KeyboardInterrupt:
             print('-' * 99)
             print('Exiting from training early')

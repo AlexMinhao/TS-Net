@@ -471,8 +471,8 @@ class WASN(nn.Module):
         self.self_attention_dropout = nn.Dropout(0.2)
         self.count_levels = 0
         self.bn = nn.BatchNorm1d(in_planes)
-        self.projection = nn.Conv1d(170, 170,
-                                    kernel_size=1, stride=1, bias=False)
+        #self.projection = nn.Conv1d(170, 170,
+        #                            kernel_size=1, stride=1, bias=False)
         self.projection1 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
@@ -480,9 +480,13 @@ class WASN(nn.Module):
                                      kernel_size=1, stride=1, bias=False)
 
         self.projection3 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
-        self.hidden_size = in_planes
+        
+        self.hidden_size = in_planes 
         # For positional encoding
-        num_timescales = in_planes // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
+        #if self.hidden_size%2 == 1:
+        #    self.hidden_size += 1
+
+        num_timescales = self.hidden_size // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
         max_timescale = 10000.0
         min_timescale = 1.0
         # min_timescale: 将应用于每个位置的最小尺度
@@ -503,13 +507,16 @@ class WASN(nn.Module):
         temp2 = self.inv_timescales.unsqueeze(0) #1 256
         scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0) #5 256
         signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)],
-                           dim=1) #5 512
-        signal = F.pad(signal, (0, 0, 0, self.hidden_size % 2))
+                           dim=1) #5 512 [T, C]
+        signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
+        if self.hidden_size % 2==1:
+            signal = signal[:,1:]
         signal = signal.view(1, max_length, self.hidden_size)
+       
         return signal
 
     def forward(self, x):
-        x += self.get_position_encoding(x)
+        #x += self.get_position_encoding(x)
         res1 = x
 
         # for i in range(self.num_blocks):

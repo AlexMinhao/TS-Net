@@ -238,7 +238,7 @@ def adjust_learning_rate(optimizer, epoch, args):
 
 def train(train_data, valid_data, test_data, args, result_file, writer):
     node_cnt = train_data.shape[1]
-    model = Model(node_cnt, 2, args.window_size, args.multi_layer, horizon=args.horizon)
+
     # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
     # part = [[1, 1], [1,1], [1,1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
 
@@ -248,8 +248,7 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
     print('level number {}, level details: {}'.format(len(part), part))
     model = WASN(args, num_classes=args.horizon, num_stacks = args.num_stacks, first_conv = args.input_dim,
                       number_levels=len(part),
-                      number_level_part=part,
-                      haar_wavelet=False)
+                      number_level_part=part)
 
     print('Parameters of need to grad is:{} M'.format(count_params(model) / 1000000.0))
     in1 = torch.randn(args.batch_size, args.window_size, args.input_dim)

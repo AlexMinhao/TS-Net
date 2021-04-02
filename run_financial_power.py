@@ -40,7 +40,7 @@ parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/var
 
 
 
-parser.add_argument('--batch_size',type=int,default=32,help='batch size')
+parser.add_argument('--batch_size',type=int,default=128,help='batch size')
 parser.add_argument('--lr',type=float,default=0.0003,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 
@@ -53,10 +53,10 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=3, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 
-parser.add_argument('--window_size', type=int, default=32) # input size
+parser.add_argument('--window_size', type=int, default=168) # input size
 parser.add_argument('--horizon', type=int, default=24)  # predication
 
-parser.add_argument('--lradj', type=int, default=9,help='adjust learning rate')
+parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
 
 parser.add_argument('--model_name', type=str, default='base')
 
@@ -132,7 +132,7 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     res_mid = None
     test = None
 
-    for X, Y in data.get_batches(X, Y, batch_size*200, False):
+    for X, Y in data.get_batches(X, Y, batch_size*10, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
@@ -140,6 +140,7 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
             forecast, res = model(X) #torch.Size([32, 3, 137])
         forecast = torch.squeeze(forecast)
         res = torch.squeeze(res)
+        true = Y[:, -1, :].squeeze()
         if len(forecast.shape)==1:
             forecast = forecast.unsqueeze(dim=0)
             res = res.unsqueeze(dim=0)
@@ -147,11 +148,11 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
             predict = forecast[:,-1,:].squeeze()
             res_mid = res[:,-1,:].squeeze()
             test = Y[:,-1,:].squeeze() #torch.Size([32, 3, 137])
-            true = Y[:, -1, :].squeeze()
+
         else:
-            predict = torch.cat((predict, forecast))
-            res_mid = torch.cat((res_mid, res))
-            test = torch.cat((test, Y))
+            predict = torch.cat((predict, forecast[:,-1,:].squeeze()))
+            res_mid = torch.cat((res_mid, res[:,-1,:].squeeze()))
+            test = torch.cat((test, Y[:, -1, :].squeeze()))
         output = forecast[:,-1,:].squeeze()
         output_res = res[:,-1,:].squeeze()
         scale = data.scale.expand(output.size(0),data.m)
@@ -238,7 +239,7 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     res_mid = None
     test = None
 
-    for X, Y in data.get_batches(X, Y, batch_size*200, False):
+    for X, Y in data.get_batches(X, Y, batch_size*10, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
@@ -246,35 +247,44 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
             forecast, res = model(X) #torch.Size([32, 3, 137])
         forecast = torch.squeeze(forecast)
         res = torch.squeeze(res)
+        true = Y[:, -1, :].squeeze()
         if len(forecast.shape)==1:
             forecast = forecast.unsqueeze(dim=0)
             res = res.unsqueeze(dim=0)
         if predict is None:
-            predict = forecast
-            res_mid = res
-            test = Y #torch.Size([32, 3, 137])
+            predict = forecast[:, -1, :].squeeze()
+            res_mid = res[:, -1, :].squeeze()
+            test = Y[:, -1, :].squeeze()  # torch.Size([32, 3, 137])
+
         else:
-            predict = torch.cat((predict, forecast))
-            res_mid = torch.cat((res_mid, res))
-            test = torch.cat((test, Y))
+            predict = torch.cat((predict, forecast[:, -1, :].squeeze()))
+            res_mid = torch.cat((res_mid, res[:, -1, :].squeeze()))
+            test = torch.cat((test, Y[:, -1, :].squeeze()))
+        output = forecast[:, -1, :].squeeze()
+        output_res = res[:, -1, :].squeeze()
+        scale = data.scale.expand(output.size(0), data.m)
+        # evaluation_pred =  (output * scale)
+        # evaluation_true = (Y * scale)
+        # evaluation_pred = evaluation_pred[:,-1,:].squeeze()
+        # evaluation_true = evaluation_true[:,-1,:].squeeze()
+        #
+        # evaluation_res =  (res * scale)
+        # evaluation_res = evaluation_res[:,-1,:].squeeze()
+        total_loss += evaluateL2(output * scale, true * scale).item()
+        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
+        total_loss_mid += evaluateL2(output_res * scale, true * scale).item()
+        total_loss_l1_mid += evaluateL1(output_res * scale, true * scale).item()
 
-        scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
-        evaluation_pred =  (forecast * scale)
-        evaluation_true = (Y * scale)
-        evaluation_pred = evaluation_pred[:,-1,:].squeeze()
-        evaluation_true = evaluation_true[:,-1,:].squeeze()
+        n_samples += (output.size(0) * data.m)
 
-        evaluation_res =  (res * scale)
-        evaluation_res = evaluation_res[:,-1,:].squeeze()
+        #
+        # total_loss += evaluateL2(evaluation_pred, evaluation_true).item()
+        # total_loss_l1 += evaluateL1(evaluation_pred, evaluation_true).item()
+        #
+        # total_loss_mid += evaluateL2(evaluation_res, evaluation_true).item()
+        # total_loss_l1_mid += evaluateL1(evaluation_res, evaluation_true).item()
 
-
-        total_loss += evaluateL2(evaluation_pred, evaluation_true).item()
-        total_loss_l1 += evaluateL1(evaluation_pred, evaluation_true).item()
-
-        total_loss_mid += evaluateL2(evaluation_res, evaluation_true).item()
-        total_loss_l1_mid += evaluateL1(evaluation_res, evaluation_true).item()
-
-        n_samples += (forecast.size(0) * data.m)
+        n_samples += (output.size(0) * data.m)
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -289,7 +299,7 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
-###############################Middle#######################################################
+    ###############################Middle#######################################################
     rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
     rae_mid = (total_loss_l1_mid / n_samples) / data.rae
 

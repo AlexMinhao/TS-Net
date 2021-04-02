@@ -104,8 +104,8 @@ def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, 
     # score = evaluate(target, forecast)
     score = evaluate(target, forecast)
     score1 = evaluate(target, mid)
-
-
+    score_final_detail = evaluate(target, forecast,by_step=True)
+    print('by step:MAE&RMSE',score_final_detail)
     end = datetime.now()
 
 
@@ -196,7 +196,7 @@ def adjust_learning_rate(optimizer, epoch, args):
         #     10: 5e-7, 15: 1e-7, 20: 5e-8
         # }
         lr_adjust = {
-            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 45: 0.00001
+            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 50: 0.00001
             , 70: 0.000001
         }
 

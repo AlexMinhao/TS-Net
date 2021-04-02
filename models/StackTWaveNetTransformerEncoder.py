@@ -354,19 +354,17 @@ class EncoderTree(nn.Module):
             del input[0]
             rs += [r]
             self.count_levels = self.count_levels + 1
-
         for aprox in input:
             aprox = aprox.permute(0, 2, 1)  # b 77 1
             # aprox = self.avgpool(aprox) ##############################################################################
             det += [aprox]
-
         self.count_levels = 0
         # We add them inside the all GAP detail coefficients
         x = torch.cat(det, 2)  # [b, 77, 8]
-        x = x.permute(0, 2, 1)
+        #x = x.permute(0, 2, 1)
         if self.norm is not None:
             x = self.norm(x)  #torch.Size([16, 512, 336])
-
+        x = x.permute(0, 2, 1)
         return x
 
 class ConvLayer(nn.Module):
@@ -408,7 +406,9 @@ class WASN(nn.Module):
         self.conv1 = nn.Conv2d(2, 1,
                                kernel_size=1, stride=1, bias=False)
 
-        self.norm_layer = torch.nn.LayerNorm(in_planes)
+        #self.norm_layer = torch.nn.LayerNorm(in_planes)
+#        self.norm_layer = torch.nn.InstanceNorm1d(in_planes)
+        self.norm_layer = None
         self.num_blocks = num_stacks
 
         self.blocks1 = EncoderTree(
@@ -421,7 +421,8 @@ class WASN(nn.Module):
             ],
 
 
-            level_parts = number_level_part
+            level_parts = number_level_part,
+            norm_layer = self.norm_layer
         )
         number_levels_1 = 1
         self.blocks2 = EncoderTree(
@@ -434,7 +435,8 @@ class WASN(nn.Module):
             ],
 
 
-            level_parts= number_level_part
+            level_parts= number_level_part,
+            norm_layer = self.norm_layer
         )
 
         if no_bootleneck:
@@ -445,7 +447,6 @@ class WASN(nn.Module):
         if classifier == "mode1":
             self.fc = nn.Linear(out_planes, num_classes)
         elif classifier == "mode2":
-
             self.fc = nn.Sequential(
                 nn.Linear(in_planes * (number_levels + 1), 1024),  # Todo:  extend channels
                 nn.BatchNorm1d(1024),
@@ -479,13 +480,13 @@ class WASN(nn.Module):
         self.projection2 = nn.Conv1d(2*args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection3 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
+#        self.projection3 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
         
         self.hidden_size = in_planes 
         # For positional encoding
-        #if self.hidden_size%2 == 1:
-        #    self.hidden_size += 1
-
+#        if self.hidden_size%2 == 1:
+#            num_timescales = (self.hidden_size+1)//2
+#        else:
         num_timescales = self.hidden_size // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
         max_timescale = 10000.0
         min_timescale = 1.0
@@ -508,15 +509,15 @@ class WASN(nn.Module):
         scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0) #5 256
         signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)],
                            dim=1) #5 512 [T, C]
-        signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
-        if self.hidden_size % 2==1:
-            signal = signal[:,1:]
+        if self.hidden_size % 2 == 1:
+            signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
+            signal = signal[:,:-1]
         signal = signal.view(1, max_length, self.hidden_size)
        
         return signal
 
     def forward(self, x):
-        #x += self.get_position_encoding(x)
+        x += self.get_position_encoding(x)
         res1 = x
 
         # for i in range(self.num_blocks):
@@ -526,6 +527,7 @@ class WASN(nn.Module):
         x += res1
 
         x = self.projection1(x)
+
         MidOutPut = x
         #######################################################
 

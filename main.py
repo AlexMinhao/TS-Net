@@ -42,7 +42,7 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
-
+parser.add_argument('--positionalEcoding', type = bool , default=True)
 
 args = parser.parse_args()
 print(f'Training configs: {args}')

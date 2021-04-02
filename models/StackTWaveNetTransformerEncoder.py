@@ -313,7 +313,7 @@ class WASN(nn.Module):
 
         in_planes = first_conv
         out_planes = first_conv * (number_levels + 1)
-
+        self.pe = args.positionalEcoding
 
         self.blocks1 = EncoderTree(
             [
@@ -409,11 +409,12 @@ class WASN(nn.Module):
         return signal
 
     def forward(self, x):
-        pe = self.get_position_encoding(x)
-        if pe.shape[2]>x.shape[2]:
-            x += pe[:,:,:-1]
-        else:
-            x += self.get_position_encoding(x)
+        if self.pe:
+            pe = self.get_position_encoding(x)
+            if pe.shape[2]>x.shape[2]:
+                x += pe[:,:,:-1]
+            else:
+                x += self.get_position_encoding(x)
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)

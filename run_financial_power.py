@@ -35,9 +35,9 @@ parser.add_argument('--device',type=str,default='cuda:0',help='')
 parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/variables')
 
 
-parser.add_argument('--seq_in_len',type=int,default= 48,help='input sequence length') #24*7
+# parser.add_argument('--seq_in_len',type=int,default= 64,help='input sequence length') #24*7
 
-parser.add_argument('--horizon', type=int, default=24)
+
 
 
 parser.add_argument('--batch_size',type=int,default=32,help='batch size')
@@ -52,13 +52,18 @@ parser.add_argument('--hidden-size', default=1, type=float, help='hidden channel
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
 parser.add_argument('--kernel', default=3, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
-parser.add_argument('--window_size', type=int, default=1)
+
+parser.add_argument('--window_size', type=int, default=32) # input size
+parser.add_argument('--horizon', type=int, default=24)  # predication
+
 parser.add_argument('--lradj', type=int, default=9,help='adjust learning rate')
 
 parser.add_argument('--model_name', type=str, default='base')
 
+parser.add_argument('--positionalEcoding', type = bool , default=False)
+
 args = parser.parse_args()
-args.window_size = args.seq_in_len
+
 
 device = torch.device(args.device)
 torch.set_num_threads(3)
@@ -490,7 +495,7 @@ def train(epoch, data, X, Y, model, criterion, optim, batch_size):
 
 def main_run():
 
-    Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.seq_in_len, args.normalize)
+    Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
 
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model

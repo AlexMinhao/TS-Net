@@ -18,27 +18,7 @@ import torch
 import pickle as cp
 import pywt
 
-ALL_SENSOR_CHANNELS = 113
-NB_SENSOR_CHANNELS = 77
-# Hardcoded number of classes in the gesture recognition problem
-NUM_CLASSES = 18
-# Hardcoded length of the sliding window mechanism employed to segment the data
-SLIDING_WINDOW_LENGTH = 48
-# Hardcoded step of the sliding window mechanism employed to segment the data
-SLIDING_WINDOW_STEP = 12
-# Length of the input sequence after convolutional operations
-FINAL_SEQUENCE_LENGTH = 8
-# Batch Size
-BATCH_SIZE = 64
-# Number filters convolutional layers
-NUM_FILTERS = 64
-# Size filters convolutional layers
-FILTER_SIZE = 5
-# Number of unit in the long short-term recurrent layers
-NUM_UNITS_LSTM = 128
-NUM_LSTM_LAYERS = 2
-BASE_lr = 0.0003
-EPOCH = 100
+
 
 import argparse
 
@@ -178,14 +158,10 @@ class LiftingScheme(nn.Module):
 
             x_even = x_even.permute(0, 2, 1)
             x_odd = x_odd.permute(0, 2, 1)
-            # x_odd = self.ptemp(x_odd)
-            # x_odd =self.U(x_odd) #18 65
-            # c = x_even + self.U(x_odd)
-            # d = x_odd - self.P(c)
+
             d = x_odd - self.P(x_even)
             c = x_even + self.U(d)
-            # c = x_even + self.seNet_P(x_odd)
-            # d = x_odd - self.seNet_P(c)
+
             return (c, d)
 
 

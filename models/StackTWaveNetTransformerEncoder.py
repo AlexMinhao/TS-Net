@@ -187,15 +187,15 @@ class BottleneckBlock(nn.Module):
         # self.relu = nn.LeakyReLU(negative_slope=0.01, inplace=True)
 
         self.disable_conv = disable_conv  # in_planes == out_planes
-        # if not self.disable_conv:
-        #     self.conv1 = nn.Conv1d(in_planes, out_planes, kernel_size=1, stride=1,
-        #                            padding=0, bias=False)
+        if not self.disable_conv:
+            self.conv1 = nn.Conv1d(in_planes, out_planes, kernel_size=1, stride=1,
+                                   padding=0, bias=False)
 
     def forward(self, x):
         if self.disable_conv:
             return self.relu(self.bn1(x))
-        # else:
-        #     return self.conv1(self.relu(self.bn1(x)))
+        else:
+            return self.conv1(self.relu(self.bn1(x)))
 
 
 class LevelWASN(nn.Module):

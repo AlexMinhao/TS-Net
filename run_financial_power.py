@@ -35,7 +35,7 @@ parser.add_argument('--device',type=str,default='cuda:0',help='')
 parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/variables')
 
 
-parser.add_argument('--seq_in_len',type=int,default= 24,help='input sequence length') #24*7
+parser.add_argument('--seq_in_len',type=int,default= 48,help='input sequence length') #24*7
 
 parser.add_argument('--horizon', type=int, default=24)
 
@@ -52,12 +52,14 @@ parser.add_argument('--hidden-size', default=1, type=float, help='hidden channel
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
 parser.add_argument('--kernel', default=3, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
-parser.add_argument('--window_size', type=int, default=24)
+parser.add_argument('--window_size', type=int, default=1)
 parser.add_argument('--lradj', type=int, default=9,help='adjust learning rate')
 
 parser.add_argument('--model_name', type=str, default='base')
 
 args = parser.parse_args()
+args.window_size = args.seq_in_len
+
 device = torch.device(args.device)
 torch.set_num_threads(3)
 

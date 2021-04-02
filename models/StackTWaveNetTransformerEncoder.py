@@ -364,7 +364,7 @@ class WASN(nn.Module):
         self.projection1 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection2 = nn.Conv1d(2*args.window_size, num_classes,
+        self.projection2 = nn.Conv1d(args.window_size+num_classes, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
 

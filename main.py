@@ -2,7 +2,7 @@ import os
 import torch
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
-from models.handler import train, test,retrain
+from models.handler import train, trainSemi, test,retrain
 import argparse
 import pandas as pd
 import numpy as np
@@ -20,7 +20,7 @@ parser.add_argument('--valid_length', type=float, default=2)
 parser.add_argument('--test_length', type=float, default=2)
 parser.add_argument('--epoch', type=int, default=60)
 parser.add_argument('--lr', type=float, default=0.001)
-parser.add_argument('--multi_layer', type=int, default=5)
+
 parser.add_argument('--device', type=str, default='cuda:0')
 parser.add_argument('--validate_freq', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=8)
@@ -29,21 +29,24 @@ parser.add_argument('--optimizer', type=str, default='N') #
 parser.add_argument('--early_stop', type=bool, default=False)
 parser.add_argument('--exponential_decay_step', type=int, default=5)
 parser.add_argument('--decay_rate', type=float, default=0.5)
-parser.add_argument('--dropout_rate', type=float, default=0.5)
-parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
-parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
+
+parser.add_argument('--lradj', type=int, default=9,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
 parser.add_argument('--model_name', type=str, default='base')
 # Action Part
 
 parser.add_argument('--input_dim', type=int, default=170)################
 parser.add_argument('--num_stacks', type=int, default=1)
-parser.add_argument('--share-weight', default=0, type=int, help='share weight or not in attention q,k,v')
-parser.add_argument('--temp', default=0, type=int, help='Use temporature weights or not, if false, temp=1')
+
 parser.add_argument('--hidden-size', default=1, type=float, help='hidden channel of module')###################################
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')###########################
+<<<<<<< HEAD
 parser.add_argument('--head_size', default=16, type=int, help='hidden channel of module')
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
+=======
+
+parser.add_argument('--kernel', default=3, type=int, help='kernel size')
+>>>>>>> 3ab96785d843d86b0308f84e8dc275c93d0b8ca2
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 
 
@@ -80,9 +83,14 @@ if __name__ == '__main__':
     if args.train:
         try:
             before_train = datetime.now().timestamp()
-            _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
-            after_train = datetime.now().timestamp()
-            print(f'Training took {(after_train - before_train) / 60} minutes')
+            if args.model_name == "Semi":
+                _, normalize_statistic = trainSemi(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
+            else:
+                _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
         except KeyboardInterrupt:
             print('-' * 99)
             print('Exiting from training early')

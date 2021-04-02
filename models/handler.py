@@ -57,6 +57,7 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
         for i, (inputs, target) in enumerate(dataloader):
             inputs = inputs.to(device)
             target = target.to(device)
+            input_set.append(inputs.detach().cpu().numpy())
             step = 0
             forecast_steps = np.zeros([inputs.size()[0], horizon, node_cnt], dtype=np.float)
             Mid_steps = np.zeros([inputs.size()[0], horizon, node_cnt], dtype=np.float)
@@ -78,7 +79,7 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
             forecast_set.append(forecast_steps)
             Mid_set.append(Mid_steps)
             target_set.append(target.detach().cpu().numpy())
-            input_set.append(inputs.detach().cpu().numpy())
+
 
     return np.concatenate(forecast_set, axis=0), np.concatenate(target_set, axis=0),np.concatenate(Mid_set, axis=0), np.concatenate(input_set, axis=0),
 
@@ -237,7 +238,7 @@ def adjust_learning_rate(optimizer, epoch, args):
 
 def train(train_data, valid_data, test_data, args, result_file, writer):
     node_cnt = train_data.shape[1]
-    model = Model(node_cnt, 2, args.window_size, args.multi_layer, horizon=args.horizon)
+
     # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
     # part = [[1, 1], [1,1], [1,1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
 
@@ -247,8 +248,7 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
     print('level number {}, level details: {}'.format(len(part), part))
     model = WASN(args, num_classes=args.horizon, num_stacks = args.num_stacks, first_conv = args.input_dim,
                       number_levels=len(part),
-                      number_level_part=part,
-                      haar_wavelet=False)
+                      number_level_part=part)
 
     print('Parameters of need to grad is:{} M'.format(count_params(model) / 1000000.0))
     in1 = torch.randn(args.batch_size, args.window_size, args.input_dim)
@@ -488,3 +488,214 @@ def retrain(train_data, valid_data, args, result_file, epoch):
         if args.early_stop and validate_score_non_decrease_count >= args.early_stop_step:
             break
     return performance_metrics, normalize_statistic
+
+
+def trainSemi(train_data, valid_data, test_data, args, result_file, writer):
+
+    from models.StackTWaveNetEcoDecoSemi import WASN
+
+    node_cnt = train_data.shape[1]
+
+    # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
+    # part = [[1, 1], [1,1], [1,1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
+
+    part = [[1, 1], [0, 0], [0, 0]]
+    # # part = [[0, 1], [0, 0]]
+    # part = [[0, 0]]
+    print('level number {}, level details: {}'.format(len(part), part))
+    model = WASN(args, num_classes=args.horizon, num_stacks=args.num_stacks, first_conv=args.input_dim,
+                 number_levels=len(part),
+                 number_level_part=part,
+                 haar_wavelet=False)
+
+    print('Parameters of need to grad is:{} M'.format(count_params(model) / 1000000.0))
+    in1 = torch.randn(8, 12, 170)
+    flops, params = profile(model, inputs=(in1,))
+    macs, params = clever_format([flops, params], "%.3f")
+    print('MACs: {}, Parameters: {}'.format(macs, params))
+    #    print_model_parm_flops(model)
+    model.to(args.device)
+    if len(train_data) == 0:
+        raise Exception('Cannot organize enough training data')
+    if len(valid_data) == 0:
+        raise Exception('Cannot organize enough validation data')
+    if len(test_data) == 0:
+        raise Exception('Cannot organize enough test data')
+    if args.norm_method == 'z_score':
+        train_mean = np.mean(train_data, axis=0)
+        train_std = np.std(train_data, axis=0)
+        normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
+    elif args.norm_method == 'min_max':
+        train_min = np.min(train_data, axis=0)
+        train_max = np.max(train_data, axis=0)
+        normalize_statistic = {"min": train_min, "max": train_max}
+    else:
+        normalize_statistic = None
+
+    if args.optimizer == 'RMSProp':
+        my_optim = torch.optim.RMSprop(params=model.parameters(), lr=args.lr, eps=1e-08)
+    else:
+        my_optim = torch.optim.Adam(params=model.parameters(), lr=args.lr, betas=(0.9, 0.999),
+                                    weight_decay=args.weight_decay)
+        # my_optim = torch.optim.AdamW(params=model.parameters(), lr=args.lr)
+
+    my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=my_optim, gamma=args.decay_rate)
+
+    train_set = ForecastDataset(train_data, window_size=args.window_size, horizon=args.horizon,
+                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+    valid_set = ForecastDataset(valid_data, window_size=args.window_size, horizon=args.horizon,
+                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+    test_set = ForecastDataset(test_data, window_size=args.window_size, horizon=args.horizon,
+                               normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+    train_loader = torch_data.DataLoader(train_set, batch_size=args.batch_size, drop_last=False, shuffle=True,
+                                         num_workers=1)
+    valid_loader = torch_data.DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
+    test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
+
+    #    forecast_loss = nn.MSELoss(reduction='mean').to(args.device)
+    # forecast_loss = nn.L1Loss().to(args.device)
+    #    forecast_loss = nn.SmoothL1Loss().to(args.device)
+    forecast_loss = smooth_l1_loss
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad: continue
+        param = parameter.numel()
+        total_params += param
+    print(f"Total Trainable Params: {total_params}")
+
+    best_validate_mae = np.inf
+    best_test_mae = np.inf
+    validate_score_non_decrease_count = 0
+
+    performance_metrics = {}
+    for epoch in range(args.epoch):
+
+        adjust_learning_rate(my_optim, epoch, args)
+        epoch_start_time = time.time()
+        model.train()
+        loss_total = 0
+        loss_total_F = 0
+        loss_total_M = 0
+        cnt = 0
+        for i, (inputs, target) in enumerate(train_loader):
+            inputs = inputs.to(args.device)  # torch.Size([32, 12, 228])
+            target = target.to(args.device)  # torch.Size([32, 3, 228])
+            model.zero_grad()
+            forecast, res = model(inputs)
+            # loss = forecast_loss(forecast, target) + forecast_loss(res, target)
+            # loss1 = forecast_loss(forecast, target)
+            # loss2 = forecast_loss(res, target)
+            beta = 0.1  # for the threshold of the smooth L1 loss
+            loss = forecast_loss(forecast, inputs, beta) + forecast_loss(res, target, beta)
+            loss_F = forecast_loss(forecast, inputs, beta)
+            loss_M = forecast_loss(res, target, beta)
+            cnt += 1
+            loss.backward()
+            my_optim.step()
+            loss_total += float(loss)
+            loss_total_F += float(loss_F)
+            loss_total_M += float(loss_M)
+
+        print(
+            '| end of epoch {:3d} | time: {:5.2f}s | train_total_loss {:5.4f}, loss_F {:5.4f}, loss_M {:5.4f}  '.format(
+                epoch, (
+                        time.time() - epoch_start_time), loss_total / cnt, loss_total_F / cnt, loss_total_M / cnt))
+
+        writer.add_scalar('Train_loss_tatal', loss_total / cnt, global_step=epoch)
+        writer.add_scalar('Train_loss_Mid', loss_total_F / cnt, global_step=epoch)
+        writer.add_scalar('Train_loss_Final', loss_total_M / cnt, global_step=epoch)
+
+        # save_model(model, result_file, epoch)
+        if (epoch + 1) % args.exponential_decay_step == 0:
+            my_lr_scheduler.step()
+        if (epoch + 1) % args.validate_freq == 0:
+            is_best_for_now = False
+            print('------ validate on data: VALIDATE ------')
+            performance_metrics = \
+                validateSemi(model, epoch, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
+                         node_cnt, args.window_size, args.horizon,
+                         writer, result_file=None, test=False)
+            test_metrics = validateSemi(model, epoch, forecast_loss, test_loader, args.device, args.norm_method,
+                                    normalize_statistic,
+                                    node_cnt, args.window_size, args.horizon,
+                                    writer, result_file=None, test=True)
+            if best_validate_mae > performance_metrics['mae']:
+                best_validate_mae = performance_metrics['mae']
+                is_best_for_now = True
+                validate_score_non_decrease_count = 0
+                print('got best validation result:', performance_metrics, test_metrics)
+            else:
+                validate_score_non_decrease_count += 1
+            if best_test_mae > test_metrics['mae']:
+                best_test_mae = test_metrics['mae']
+                print('got best test result:', test_metrics)
+
+            # save model
+            # if is_best_for_now:
+            #     save_model(model, result_file)
+            # if epoch%4==0:
+            #     save_model(model, result_file,epoch=epoch)
+        # early stop
+        if args.early_stop and validate_score_non_decrease_count >= args.early_stop_step:
+            break
+    return performance_metrics, normalize_statistic
+
+
+
+def validateSemi(model, epoch, forecast_loss, dataloader, device, normalize_method, statistic,
+             node_cnt, window_size, horizon, writer,
+             result_file=None,test=False):
+    start = datetime.now()
+
+    forecast_norm, target_norm, mid_norm, input_norm = inference(model, dataloader, device,
+                                           node_cnt, window_size, horizon)
+    if normalize_method and statistic:
+        forecast = de_normalized(forecast_norm, normalize_method, statistic)
+        target = de_normalized(target_norm, normalize_method, statistic)
+        mid = de_normalized(mid_norm, normalize_method, statistic)
+        input = de_normalized(input_norm, normalize_method, statistic)
+    else:
+        forecast, target = forecast_norm, target_norm
+        forecast, target, mid = forecast_norm, target_norm, mid_norm
+        forecast, target, mid, input = forecast_norm, target_norm, mid_norm, input_norm
+
+
+    # score = evaluate(target, forecast)
+    score = evaluate(input, forecast)
+    score1 = evaluate(target, mid)
+
+
+    end = datetime.now()
+
+
+    if test:
+        print(f'TEST: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
+        print(f'TEST: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+        writer.add_scalar('Test MAE_final', score[1], global_step=epoch)
+        writer.add_scalar('Test MAE_Mid', score1[1], global_step=epoch)
+        writer.add_scalar('Test RMSE_final', score[2], global_step=epoch)
+        writer.add_scalar('Test RMSE_Mid', score1[2], global_step=epoch)
+
+    else:
+        print(f'VAL: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
+        print(f'VAL: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+        writer.add_scalar('VAL MAE_final', score[1], global_step=epoch)
+        writer.add_scalar('VAL MAE_Mid', score1[1], global_step=epoch)
+        writer.add_scalar('VAL RMSE_final', score[2], global_step=epoch)
+        writer.add_scalar('VAL RMSE_Mid', score1[2], global_step=epoch)
+
+    if result_file:
+        if not os.path.exists(result_file):
+            os.makedirs(result_file)
+        step_to_print = 0
+        forcasting_2d = forecast[:, step_to_print, :]
+        forcasting_2d_target = target[:, step_to_print, :]
+
+        np.savetxt(f'{result_file}/target.csv', forcasting_2d_target, delimiter=",")
+        np.savetxt(f'{result_file}/predict.csv', forcasting_2d, delimiter=",")
+        np.savetxt(f'{result_file}/predict_abs_error.csv',
+                   np.abs(forcasting_2d - forcasting_2d_target), delimiter=",")
+        np.savetxt(f'{result_file}/predict_ape.csv',
+                   np.abs((forcasting_2d - forcasting_2d_target) / forcasting_2d_target), delimiter=",")
+
+    return dict(mae=score1[1], rmse=score1[2])

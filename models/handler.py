@@ -105,18 +105,20 @@ def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, 
     # score = evaluate(target, forecast)
     score = evaluate(target, forecast)
     score1 = evaluate(target, mid)
-
-
+    score_final_detail = evaluate(target, forecast,by_step=True)
+    print('by step:MAPE&MAE&RMSE',score_final_detail)
     end = datetime.now()
 
 
     if test:
-        print(f'TEST: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
-        print(f'TEST: RAW-Mid : MAE {score1[1]:7.2f}; RMSE {score1[2]:7.2f}.')
+        print(f'TEST: RAW : MAE {score[1]:7.2f};MAPE {score[0]:7.2f}; RMSE {score[2]:7.2f}.')
+        print(f'TEST: RAW-Mid : MAE {score1[1]:7.2f}; MAPE {score[0]:7.2f}; RMSE {score1[2]:7.2f}.')
+        
         writer.add_scalar('Test MAE_final', score[1], global_step=epoch)
         writer.add_scalar('Test MAE_Mid', score1[1], global_step=epoch)
         writer.add_scalar('Test RMSE_final', score[2], global_step=epoch)
         writer.add_scalar('Test RMSE_Mid', score1[2], global_step=epoch)
+        
 
     else:
         print(f'VAL: RAW : MAE {score[1]:7.2f}; RMSE {score[2]:7.2f}.')
@@ -140,7 +142,7 @@ def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, 
         np.savetxt(f'{result_file}/predict_ape.csv',
                    np.abs((forcasting_2d - forcasting_2d_target) / forcasting_2d_target), delimiter=",")
 
-    return dict(mae=score[1], rmse=score[2])
+    return dict(mae=score[1], mape=score[0], rmse=score[2])
 
 
 def adjust_learning_rate(optimizer, epoch, args):
@@ -197,7 +199,7 @@ def adjust_learning_rate(optimizer, epoch, args):
         #     10: 5e-7, 15: 1e-7, 20: 5e-8
         # }
         lr_adjust = {
-            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 45: 0.00001
+            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 50: 0.00001
             , 70: 0.000001
         }
 
@@ -400,8 +402,8 @@ def test(test_data, train_data, args, result_train_file, result_test_file, epoch
     performance_metrics = validate(model = model, forecast_loss = forecast_loss, dataloader = test_loader, device =args.device, normalize_method = args.norm_method, statistic = normalize_statistic,
                       node_cnt = node_cnt, window_size = args.window_size, horizon =args.horizon,
                       result_file=None)
-    mae, rmse = performance_metrics['mae'], performance_metrics['rmse']
-    print('Performance on test set: | MAE: {:5.2f} | RMSE: {:5.4f}'.format(mae, rmse))
+    mae, rmse, mape = performance_metrics['mae'], performance_metrics['rmse'], performance_metrics['mape']
+    print('Performance on test set: | MAE: {:5.2f} | MAPE: {:5.2f} | RMSE: {:5.4f}'.format(mae, mape, rmse))
 
     # model, forecast_loss, dataloader, device, normalize_method
 

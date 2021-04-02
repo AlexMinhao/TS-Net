@@ -18,7 +18,7 @@ parser.add_argument('--horizon', type=int, default=12)
 parser.add_argument('--train_length', type=float, default=6)
 parser.add_argument('--valid_length', type=float, default=2)
 parser.add_argument('--test_length', type=float, default=2)
-parser.add_argument('--epoch', type=int, default=60)
+parser.add_argument('--epoch', type=int, default=70)
 parser.add_argument('--lr', type=float, default=0.001)
 
 parser.add_argument('--device', type=str, default='cuda:0')
@@ -34,19 +34,13 @@ parser.add_argument('--lradj', type=int, default=9,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
 parser.add_argument('--model_name', type=str, default='base')
 # Action Part
-
 parser.add_argument('--input_dim', type=int, default=170)################
 parser.add_argument('--num_stacks', type=int, default=1)
 
 parser.add_argument('--hidden-size', default=1, type=float, help='hidden channel of module')###################################
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')###########################
-<<<<<<< HEAD
-parser.add_argument('--head_size', default=16, type=int, help='hidden channel of module')
-parser.add_argument('--kernel', default=5, type=int, help='kernel size')
-=======
 
-parser.add_argument('--kernel', default=3, type=int, help='kernel size')
->>>>>>> 3ab96785d843d86b0308f84e8dc275c93d0b8ca2
+parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 
 

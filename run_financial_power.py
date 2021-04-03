@@ -32,7 +32,7 @@ parser.add_argument('--L1Loss', type=bool, default=True)
 parser.add_argument('--normalize', type=int, default=2)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
-parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/variables')
+parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
 
 
 # parser.add_argument('--seq_in_len',type=int,default= 64,help='input sequence length') #24*7
@@ -40,7 +40,7 @@ parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/var
 
 
 
-parser.add_argument('--batch_size',type=int,default=128,help='batch size')
+parser.add_argument('--batch_size',type=int,default=321,help='batch size')
 parser.add_argument('--lr',type=float,default=0.0003,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 
@@ -53,10 +53,10 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=3, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 
-parser.add_argument('--window_size', type=int, default=168) # input size
+parser.add_argument('--window_size', type=int, default=24) # input size
 parser.add_argument('--horizon', type=int, default=24)  # predication
 
-parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
+parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
 
 parser.add_argument('--model_name', type=str, default='base')
 
@@ -120,7 +120,7 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
 
 
 
-def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
+def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,writer):
     model.eval()
     total_loss = 0
     total_loss_l1 = 0
@@ -132,15 +132,25 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     res_mid = None
     test = None
 
+    forecast_set = []
+    Mid_set = []
+    target_set = []
+
     for X, Y in data.get_batches(X, Y, batch_size*10, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
         with torch.no_grad():
             forecast, res = model(X) #torch.Size([32, 3, 137])
-        forecast = torch.squeeze(forecast)
-        res = torch.squeeze(res)
+        # forecast = torch.squeeze(forecast)
+        # res = torch.squeeze(res)
         true = Y[:, -1, :].squeeze()
+
+
+        forecast_set.append(forecast)
+        Mid_set.append(res)
+        target_set.append(Y)
+
         if len(forecast.shape)==1:
             forecast = forecast.unsqueeze(dim=0)
             res = res.unsqueeze(dim=0)
@@ -156,13 +166,8 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
         output = forecast[:,-1,:].squeeze()
         output_res = res[:,-1,:].squeeze()
         scale = data.scale.expand(output.size(0),data.m)
-        # evaluation_pred =  (output * scale)
-        # evaluation_true = (Y * scale)
-        # evaluation_pred = evaluation_pred[:,-1,:].squeeze()
-        # evaluation_true = evaluation_true[:,-1,:].squeeze()
-        #
-        # evaluation_res =  (res * scale)
-        # evaluation_res = evaluation_res[:,-1,:].squeeze()
+
+
         total_loss += evaluateL2(output * scale, true * scale).item()
         total_loss_l1 += evaluateL1(output * scale, true * scale).item()
         total_loss_mid += evaluateL2(output_res * scale, true * scale).item()
@@ -170,14 +175,40 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
 
         n_samples += (output.size(0) * data.m)
 
-        #
-        # total_loss += evaluateL2(evaluation_pred, evaluation_true).item()
-        # total_loss_l1 += evaluateL1(evaluation_pred, evaluation_true).item()
-        #
-        # total_loss_mid += evaluateL2(evaluation_res, evaluation_true).item()
-        # total_loss_l1_mid += evaluateL1(evaluation_res, evaluation_true).item()
+    forecast_Norm = torch.cat(forecast_set, axis=0)
+    target_Norm = torch.cat(target_set, axis=0)
+    Mid_Norm = torch.cat(Mid_set, axis=0)
 
-        n_samples += (output.size(0) * data.m)
+
+    rse_final_each = []
+    rae_final_each = []
+    corr_final_each = []
+    Scale = data.scale.expand(forecast_Norm.size(0),data.m)
+    for i in range(forecast_Norm.shape[1]):
+        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
+        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
+        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0]/ data.m) / data.rse
+        rae_F = (lossL1_F / forecast_Norm.shape[0]/ data.m) / data.rae
+        rse_final_each.append(rse_F.item())
+        rae_final_each.append(rae_F.item())
+
+        pred = forecast_Norm[:,i,:].data.cpu().numpy()
+        y_true = target_Norm[:,i,:].data.cpu().numpy()
+
+        sig_p = (pred).std(axis=0)
+        sig_g = (y_true).std(axis=0)
+        m_p = pred.mean(axis=0)
+        m_g = y_true.mean(axis=0)
+        ind = (sig_g != 0)
+        corr = ((pred - m_p) * (y_true - m_g)).mean(axis=0) / (sig_p * sig_g)
+        corr = (corr[ind]).mean()
+        corr_final_each.append(corr)
+
+    print('Valid_Each_final Rse:', rse_final_each)
+    print('Valid_Each_final Rae:', rae_final_each)
+    print('Valid_Each_final Corr:', corr_final_each)
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -227,7 +258,7 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
 
 
 
-def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
+def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, writer):
     model.eval()
     total_loss = 0
     total_loss_l1 = 0
@@ -239,15 +270,24 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
     res_mid = None
     test = None
 
+    forecast_set = []
+    Mid_set = []
+    target_set = []
+
     for X, Y in data.get_batches(X, Y, batch_size*10, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
         with torch.no_grad():
             forecast, res = model(X) #torch.Size([32, 3, 137])
-        forecast = torch.squeeze(forecast)
-        res = torch.squeeze(res)
+        # forecast = torch.squeeze(forecast)
+        # res = torch.squeeze(res)
         true = Y[:, -1, :].squeeze()
+
+        forecast_set.append(forecast)
+        Mid_set.append(res)
+        target_set.append(Y)
+
         if len(forecast.shape)==1:
             forecast = forecast.unsqueeze(dim=0)
             res = res.unsqueeze(dim=0)
@@ -263,13 +303,7 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
         output = forecast[:, -1, :].squeeze()
         output_res = res[:, -1, :].squeeze()
         scale = data.scale.expand(output.size(0), data.m)
-        # evaluation_pred =  (output * scale)
-        # evaluation_true = (Y * scale)
-        # evaluation_pred = evaluation_pred[:,-1,:].squeeze()
-        # evaluation_true = evaluation_true[:,-1,:].squeeze()
-        #
-        # evaluation_res =  (res * scale)
-        # evaluation_res = evaluation_res[:,-1,:].squeeze()
+
         total_loss += evaluateL2(output * scale, true * scale).item()
         total_loss_l1 += evaluateL1(output * scale, true * scale).item()
         total_loss_mid += evaluateL2(output_res * scale, true * scale).item()
@@ -277,14 +311,42 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size):
 
         n_samples += (output.size(0) * data.m)
 
-        #
-        # total_loss += evaluateL2(evaluation_pred, evaluation_true).item()
-        # total_loss_l1 += evaluateL1(evaluation_pred, evaluation_true).item()
-        #
-        # total_loss_mid += evaluateL2(evaluation_res, evaluation_true).item()
-        # total_loss_l1_mid += evaluateL1(evaluation_res, evaluation_true).item()
+    forecast_Norm = torch.cat(forecast_set, axis=0)
+    target_Norm = torch.cat(target_set, axis=0)
+    Mid_Norm = torch.cat(Mid_set, axis=0)
 
-        n_samples += (output.size(0) * data.m)
+    rse_final_each = []
+    rae_final_each = []
+    corr_final_each = []
+    Scale = data.scale.expand(forecast_Norm.size(0), data.m)
+    for i in range(forecast_Norm.shape[1]):
+        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0] / data.m) / data.rse
+        rae_F = (lossL1_F / forecast_Norm.shape[0] / data.m) / data.rae
+        rse_final_each.append(rse_F.item())
+        rae_final_each.append(rae_F.item())
+
+        pred = forecast_Norm[:, i, :].data.cpu().numpy()
+        y_true = target_Norm[:, i, :].data.cpu().numpy()
+
+        sig_p = (pred).std(axis=0)
+        sig_g = (y_true).std(axis=0)
+        m_p = pred.mean(axis=0)
+        m_g = y_true.mean(axis=0)
+        ind = (sig_g != 0)
+        corr = ((pred - m_p) * (y_true - m_g)).mean(axis=0) / (sig_p * sig_g)
+        corr = (corr[ind]).mean()
+        corr_final_each.append(corr)
+
+    print('TEST_Each_final Rse:', rse_final_each)
+    print('TEST_Each_final Rae:', rae_final_each)
+    print('TEST_Each_final Corr:', corr_final_each)
+
+
+
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -551,10 +613,10 @@ def main_run():
                 adjust_learning_rate(optim, epoch, args)
                 train_loss = trainEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim, args.batch_size)
                 val_loss, val_rae, val_corr = evaluateEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
-                                                   args.batch_size)
+                                                   args.batch_size, writer)
                 test_loss, test_rae, test_corr = testEecoDeco(epoch, Data, Data.test[0], Data.test[1], model, evaluateL2,
                                                                evaluateL1,
-                                                               args.batch_size)
+                                                               args.batch_size, writer)
 
 
                 print(
@@ -580,10 +642,10 @@ def main_run():
 
 
 
-    vtest_acc, vtest_rae, vtest_corr = evaluateEecoDeco(Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
-                                         args.batch_size)
-    test_acc, test_rae, test_corr = evaluateEecoDeco(Data, Data.test[0], Data.test[1], model, evaluateL2, evaluateL1,
-                                         args.batch_size)
+    vtest_acc, vtest_rae, vtest_corr = evaluateEecoDeco(args.epochs, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
+                                         args.batch_size,writer)
+    test_acc, test_rae, test_corr = evaluateEecoDeco(args.epochs, Data, Data.test[0], Data.test[1], model, evaluateL2, evaluateL1,
+                                         args.batch_size,writer)
     print("final test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_acc, test_rae, test_corr))
     return vtest_acc, vtest_rae, vtest_corr, test_acc, test_rae, test_corr
 

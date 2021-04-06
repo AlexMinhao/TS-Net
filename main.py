@@ -2,7 +2,7 @@ import os
 import torch
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
-from models.handler import train, trainSemi, test,retrain
+from models.handler import train, trainSemi, trainEco2Deco, test,retrain
 import argparse
 import pandas as pd
 import numpy as np
@@ -10,15 +10,15 @@ from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--train', type=bool, default=True)
-parser.add_argument('--evaluate', type=bool, default=False)
+parser.add_argument('--evaluate', type=bool, default=True)
 parser.add_argument('--finetune', type=bool, default=False)
-parser.add_argument('--dataset', type=str, default='PEMS07')  #PeMS07
+parser.add_argument('--dataset', type=str, default='PEMS08')  #PeMS07
 parser.add_argument('--window_size', type=int, default=12)
 parser.add_argument('--horizon', type=int, default=12)
 parser.add_argument('--train_length', type=float, default=6)
 parser.add_argument('--valid_length', type=float, default=2)
 parser.add_argument('--test_length', type=float, default=2)
-parser.add_argument('--epoch', type=int, default=70)
+parser.add_argument('--epoch', type=int, default=80)
 parser.add_argument('--lr', type=float, default=0.001)
 
 parser.add_argument('--device', type=str, default='cuda:0')
@@ -32,7 +32,7 @@ parser.add_argument('--decay_rate', type=float, default=0.5)
 
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
-parser.add_argument('--model_name', type=str, default='base')
+parser.add_argument('--model_name', type=str, default='Semi')
 # Action Part
 parser.add_argument('--input_dim', type=int, default=170)################
 parser.add_argument('--num_stacks', type=int, default=1)
@@ -54,10 +54,11 @@ data = np.load(data_file,allow_pickle=True)
 data = data['data'][:,:,0]
 
 
-# 07  12671  228
-# 03          358
-# 04  16992 307 3
-# 08   170
+# 07M  12671   228
+# 03  26208   358
+# 04  16992   307
+# 07  28224   883
+# 08  17856   170
 # split data
 train_ratio = args.train_length / (args.train_length + args.valid_length + args.test_length)
 valid_ratio = args.valid_length / (args.train_length + args.valid_length + args.test_length)
@@ -73,28 +74,38 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_8'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()
             if args.model_name == "Semi":
+                print("===================Semi-Start=========================")
                 _, normalize_statistic = trainSemi(train_data, valid_data, test_data, args, result_train_file, writer)
                 after_train = datetime.now().timestamp()
                 print(f'Training took {(after_train - before_train) / 60} minutes')
+                print("===================Semi-End=========================")
+            elif args.model_name == "TwoDecoder":
+                print("===================TwoDecoder-Start=========================")
+                _, normalize_statistic = trainEco2Deco(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
+                print("===================TwoDecoder-End=========================")
             else:
+                print("===================Normal-Start=========================")
                 _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
                 after_train = datetime.now().timestamp()
                 print(f'Training took {(after_train - before_train) / 60} minutes')
+                print("===================Normal-End=========================")
         except KeyboardInterrupt:
             print('-' * 99)
             print('Exiting from training early')
     #
-    # if args.evaluate:
-    #
-    #     before_evaluation = datetime.now().timestamp()
-    #     test(test_data, train_data, args, result_train_file, result_test_file, epoch = 5)
-    #     after_evaluation = datetime.now().timestamp()
-    #     print(f'Evaluation took {(after_evaluation - before_evaluation) / 60} minutes')
+    if args.evaluate:
+
+        before_evaluation = datetime.now().timestamp()
+        test(test_data, train_data, args, result_train_file, result_test_file, epoch = None)
+        after_evaluation = datetime.now().timestamp()
+        print(f'Evaluation took {(after_evaluation - before_evaluation) / 60} minutes')
 
     # if args.finetune:
     #

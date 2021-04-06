@@ -423,7 +423,7 @@ class WASN(nn.Module):
 
             level_parts = number_level_part
         )
-        number_levels_1 = 1
+        # number_levels_1 = 7
         self.blocks2 = EncoderTree(
             [
                 LevelWASN(args=args, in_planes=in_planes,
@@ -434,7 +434,19 @@ class WASN(nn.Module):
             ],
 
 
-            level_parts= number_level_part
+            level_parts=number_level_part
+        )
+
+        self.blocks3 = EncoderTree(
+            [
+                LevelWASN(args=args, in_planes=in_planes,
+                          lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
+                          share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
+
+                for l in range(number_levels)
+            ],
+
+            level_parts=number_level_part
         )
 
         if no_bootleneck:
@@ -479,7 +491,10 @@ class WASN(nn.Module):
         self.projection2 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection3 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
+        self.projection3 = nn.Conv1d(args.window_size, num_classes,
+                                     kernel_size=1, stride=1, bias=False)
+
+        self.projection4 = nn.Linear(self.nb_channels_in*8, self.nb_channels_in*self.num_classes, bias=True)
         self.hidden_size = in_planes
         # For positional encoding
         num_timescales = in_planes // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
@@ -525,6 +540,12 @@ class WASN(nn.Module):
         x = self.blocks2(x, attn_mask=None)
         x += MidOutPut
         x = self.projection2(x)
+
+        # Second = x
+        # x = self.blocks3(x, attn_mask=None)
+        # x += Second
+        # x = self.projection3(x)
+
         return x, MidOutPut
 
 

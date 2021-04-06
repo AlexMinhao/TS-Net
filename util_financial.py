@@ -176,7 +176,7 @@ class DataLoaderH(object):
             start = end - self.P
             X[i, :, :] = torch.from_numpy(self.dat[start:end, :]) # dat (7588, 8)
             # Y[i, :] = torch.from_numpy(self.dat[idx_set[i], :])
-            Y[i, :, :] = torch.from_numpy(self.dat[idx_set[i] - self.h+1:idx_set[i]+1, :])
+            Y[i, :, :] = torch.from_numpy(self.dat[idx_set[i] - self.h:idx_set[i], :])
             temp = Y[i,-1,:]
         return [X, Y]                               #191 - 24： 191
 

@@ -12,6 +12,8 @@ from util_financial import *
 
 # from StackTWNet import WASN
 from models.StackTWaveNetTransformerEncoder import WASN
+# from models.OriginalStackTWaveNetTransformerEncoder import WASN
+
 
 from tensorboardX import SummaryWriter
 import torch.optim as optim
@@ -32,15 +34,13 @@ parser.add_argument('--L1Loss', type=bool, default=True)
 parser.add_argument('--normalize', type=int, default=2)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
-parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
+parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/variables')
 
 
 # parser.add_argument('--seq_in_len',type=int,default= 64,help='input sequence length') #24*7
 
 
-
-
-parser.add_argument('--batch_size',type=int,default=321,help='batch size')
+parser.add_argument('--batch_size',type=int,default=32,help='batch size')
 parser.add_argument('--lr',type=float,default=0.0003,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 
@@ -56,9 +56,9 @@ parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--window_size', type=int, default=24) # input size
 parser.add_argument('--horizon', type=int, default=24)  # predication
 
-parser.add_argument('--lradj', type=int, default=1,help='adjust learning rate')
+parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
 
-parser.add_argument('--model_name', type=str, default='base')
+parser.add_argument('--model_name', type=str, default='exc')
 
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
@@ -136,7 +136,7 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     Mid_set = []
     target_set = []
 
-    for X, Y in data.get_batches(X, Y, batch_size*10, False):
+    for X, Y in data.get_batches(X, Y, batch_size*200, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
@@ -244,6 +244,7 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     writer.add_scalar('Validation_mid_rse', rse_mid, global_step=epoch)
     writer.add_scalar('Validation_mid_rae', rae_mid, global_step=epoch)
     writer.add_scalar('Validation_mid_corr', correlation_mid, global_step=epoch)
+
 
     print(
         '|valid_final rse {:5.4f} | valid_final rae {:5.4f} | valid_final corr  {:5.4f}'.format(
@@ -382,10 +383,23 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
     writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
     writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
+#===================
+
+
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
+    # np.save('F:\\school\\Papers\\timeseriesNew\\MTGNN-master\\output\\Ytest_nolinear.npy', Ytest)
+    sigma_p = (predict).std(axis=0)
+    sigma_g = (Ytest).std(axis=0)
+    mean_p = predict.mean(axis=0)
+    mean_g = Ytest.mean(axis=0)
+    index = (sigma_g != 0)
+    correlation1 = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation1 = (correlation1[index]).mean()
 
     print(
-        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr  {:5.4f}'.format(
-            rse, rae, correlation), flush=True)
+        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr  {:5.4f} =>  {:5.4f}'.format(
+            rse, rae, correlation,correlation1), flush=True)
 
     print(
         '|Test_mid rse {:5.4f} | Test_mid rae {:5.4f} | Test_mid corr  {:5.4f}'.format(

@@ -425,9 +425,9 @@ class WASN(nn.Module):
         MidOutPut = x
 
         x = torch.cat((res1, x), dim=1)
-        res3 = x
+        res2 = x
         x = self.blocks2(x, attn_mask=None)
-        x += res3
+        x += res2
         x = self.projection2(x)
         return x, MidOutPut
 
@@ -478,6 +478,7 @@ if __name__ == '__main__':
     parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
     parser.add_argument('--kernel', default=3, type=int, help='kernel size')
     parser.add_argument('--dilation', default=1, type=int, help='dilation')
+    parser.add_argument('--positionalEcoding', type=bool, default=True)
 
     args = parser.parse_args()
     # part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model

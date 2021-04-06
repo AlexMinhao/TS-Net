@@ -48,8 +48,8 @@ def MAE(v, v_, axis=None):
 
 def evaluate(y, y_hat, by_step=False, by_node=False):
     '''
-    :param y: array in shape of [count, time_step, node].
-    :param y_hat: in same shape with y.
+    :param y: array in shape of [count, time_step, node]. GT
+    :param y_hat: in same shape with y. Pred
     :param by_step: evaluate by time_step dim.
     :param by_node: evaluate by node dim.
     :return: array of mape, mae and rmse.

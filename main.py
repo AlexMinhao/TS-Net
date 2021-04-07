@@ -32,7 +32,7 @@ parser.add_argument('--decay_rate', type=float, default=0.5)
 
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
 parser.add_argument('--weight_decay', type=float, default=1e-5)
-parser.add_argument('--model_name', type=str, default='Semi')
+parser.add_argument('--model_name', type=str, default='Normal')
 # Action Part
 parser.add_argument('--input_dim', type=int, default=170)################
 parser.add_argument('--num_stacks', type=int, default=1)
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}_8'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_0'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()

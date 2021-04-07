@@ -10,9 +10,9 @@ import numpy as np
 import time
 import os
 
-# from models.StackTWaveNetTransformerEncoder import WASN
+from models.StackTWaveNetTransformerEncoder import WASN
 # from models.StackTWaveNetEnco2Deco import WASN
-from models.StackTWaveNetEcoDecoSemi import WASN
+# from models.StackTWaveNetEcoDecoSemi import WASN
 
 from utils.math_utils import evaluate
 from thop import profile, clever_format
@@ -102,6 +102,11 @@ def validate(model, epoch, forecast_loss, dataloader, device, normalize_method, 
         forecast, target = forecast_norm, target_norm
         forecast, target, mid = forecast_norm, target_norm, mid_norm
         forecast, target, mid, input = forecast_norm, target_norm, mid_norm, input_norm
+
+    beta = 0.1
+    forecast_norm = torch.from_numpy(forecast_norm).float()
+    mid_norm = torch.from_numpy(mid_norm).float()
+    target_norm = torch.from_numpy(target_norm).float()
 
     loss = forecast_loss(forecast_norm, target_norm) + forecast_loss(mid_norm, target_norm)
     loss_F = forecast_loss(forecast_norm, target_norm)
@@ -411,7 +416,7 @@ def test(test_data, train_data, args, result_train_file, result_test_file, epoch
                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
     test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size, drop_last=False,
                                         shuffle=False, num_workers=0)
-    performance_metrics = validateSemi(model = model, epoch = 100, forecast_loss = forecast_loss, dataloader = test_loader, device =args.device, normalize_method = args.norm_method, statistic = normalize_statistic,
+    performance_metrics = validate(model = model, epoch = 100, forecast_loss = forecast_loss, dataloader = test_loader, device =args.device, normalize_method = args.norm_method, statistic = normalize_statistic,
                       node_cnt = node_cnt, window_size = args.window_size, horizon =args.horizon,
                       result_file=result_test_file, writer = None, test=True)
     mae, rmse, mape = performance_metrics['mae'], performance_metrics['rmse'], performance_metrics['mape']

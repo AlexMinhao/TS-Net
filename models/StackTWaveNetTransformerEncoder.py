@@ -17,7 +17,7 @@ import torch
 
 import pickle as cp
 import pywt
-
+from torch.nn.utils import weight_norm
 
 
 import argparse
@@ -149,10 +149,10 @@ class LiftingScheme(nn.Module):
         if self.modified:
             x_even = x_even.permute(0, 2, 1)
             x_odd = x_odd.permute(0, 2, 1)
-            d = x_odd.mul(torch.exp(self.phi(x_even))) - self.P(x_even)
-            c = x_even.mul(torch.exp(self.psi(d))) + self.U(d)
+            x_odd_update = x_odd.mul(torch.exp(self.phi(x_even))) - self.P(x_even)
+            x_even_update = x_even.mul(torch.exp(self.psi(x_odd_update))) + self.U(x_odd_update)
 
-            return (c, d)
+            return (x_even_update, x_odd_update)
 
         else:
 
@@ -174,9 +174,10 @@ class LiftingSchemeLevel(nn.Module):
 
     def forward(self, x):
         '''Returns (LL, LH, HL, HH)'''
-        (L, H) = self.level(x)  # 10 3 224 224
+       # (L, H)
+        (x_even_update, x_odd_update) = self.level(x)  # 10 3 224 224
 
-        return (L, H)
+        return (x_even_update, x_odd_update)
 
 
 class BottleneckBlock(nn.Module):
@@ -219,9 +220,9 @@ class LevelWASN(nn.Module):
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=False)
 
     def forward(self, x):
-        (L, H) = self.wavelet(x)  # 10 9 128
-        approx = L
-        details = H
+        (x_even_update, x_odd_update) = self.wavelet(x)  # 10 9 128
+        approx = x_even_update
+        details = x_odd_update
         r = None
         if (self.regu_approx + self.regu_details != 0.0):  # regu_details=0.01, regu_approx=0.01
 
@@ -251,7 +252,7 @@ class LevelWASN(nn.Module):
 
 
 class EncoderTree(nn.Module):
-    def __init__(self, level_layers,  level_parts, norm_layer=None):
+    def __init__(self, level_layers,  level_parts, Encoder = True, norm_layer=None):
         super(EncoderTree, self).__init__()
         self.level_layers = nn.ModuleList(level_layers)
         self.conv_layers = None #nn.ModuleList(conv_layers) if conv_layers is not None else None
@@ -260,25 +261,26 @@ class EncoderTree(nn.Module):
         self.level_part = level_parts #[[0, 1], [0, 0]]
 
         self.count_levels = 0
+        self.ecoder = Encoder
     def forward(self, x, attn_mask=None):
         # x [B, L, D] torch.Size([16, 336, 512])
         rs = []  # List of constrains on details and mean
         det = []  # List of averaged pooled details
-
+        x_reorder = []
         input = [x, ]
         for l in self.level_layers:
-            low, r, details = l(input[0])
+            x_even_update, r, x_odd_update = l(input[0])
 
             if self.level_part[self.count_levels][0]:
-                input.append(low)
+                input.append(x_even_update)
             else:
-                low = low.permute(0, 2, 1)
-                det += [low]  ##############################################################################
+                x_even_update = x_even_update.permute(0, 2, 1)
+                det += [x_even_update]  ##############################################################################
             if self.level_part[self.count_levels][1]:
-                details = details.permute(0, 2, 1)
-                input.append(details)
+                x_odd_update = x_odd_update.permute(0, 2, 1)
+                input.append(x_odd_update)
             else:
-                det += [details]  ##############################################################################
+                det += [x_odd_update]  ##############################################################################
             del input[0]
             rs += [r]
             self.count_levels = self.count_levels + 1
@@ -290,7 +292,52 @@ class EncoderTree(nn.Module):
 
         self.count_levels = 0
         # We add them inside the all GAP detail coefficients
-        x = torch.cat(det, 2)  # [b, 77, 8]
+
+        x = torch.cat(det, 2)  # torch.Size([32, 307, 12])
+
+        # if self.ecoder:
+        #     x_reorder.append(x[:, :, 9].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 3].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 6].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 0].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 10].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 4].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 7].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 1].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 11].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 5].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 8].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 2].unsqueeze(2))
+        # else:
+        #     x_reorder.append(x[:, :, 18].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 6].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 12].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 0].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 19].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 7].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 13].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 1].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 20].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 8].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 14].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 2].unsqueeze(2))
+        #
+        #     x_reorder.append(x[:, :, 21].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 9].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 15].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 3].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 22].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 10].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 16].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 4].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 23].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 11].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 17].unsqueeze(2))
+        #     x_reorder.append(x[:, :, 5].unsqueeze(2))
+        #
+        # x_reorder = torch.cat(x_reorder, 2)
+
+        # x = x_reorder.permute(0, 2, 1)
         x = x.permute(0, 2, 1)
         if self.norm is not None:
             x = self.norm(x)  #torch.Size([16, 512, 336])
@@ -310,6 +357,28 @@ class WASN(nn.Module):
 
         # First convolution
 
+        if first_conv != 3 and first_conv != 9 and first_conv != NB_SENSOR_CHANNELS:
+            self.first_conv = True
+            self.conv1 = nn.Sequential(
+                weight_norm(nn.Conv1d(first_conv, first_conv,
+                          kernel_size=2, stride=1, padding=1, bias=False)),
+                # nn.BatchNorm1d(extend_channel),
+
+                nn.LeakyReLU(negative_slope=0.01, inplace=True),
+                nn.Dropout(0.5),
+                nn.Conv1d(extend_channel, extend_channel,
+                          kernel_size=2, stride=1, padding=1, bias=False),
+                nn.BatchNorm1d(extend_channel),
+                nn.LeakyReLU(negative_slope=0.01, inplace=True),
+                nn.Dropout(0.5),
+            )
+            in_planes = extend_channel
+            out_planes = extend_channel * (number_levels + 1)
+        else:
+            self.first_conv = False
+            in_planes = first_conv
+            out_planes = first_conv * (number_levels + 1)
+
 
         in_planes = first_conv
         out_planes = first_conv * (number_levels + 1)
@@ -325,7 +394,8 @@ class WASN(nn.Module):
             ],
 
 
-            level_parts = number_level_part
+            level_parts = number_level_part,
+            Encoder = True
         )
 
         self.blocks2 = EncoderTree(
@@ -338,7 +408,8 @@ class WASN(nn.Module):
             ],
 
 
-            level_parts= number_level_part
+            level_parts= number_level_part,
+             Encoder = False
         )
 
         if no_bootleneck:

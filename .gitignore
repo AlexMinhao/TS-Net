@@ -1,5 +1,8 @@
 log/
+dataset/
+*.txt
 *.pyc
 *.idea
 *.xml
 run/
+run_financial/

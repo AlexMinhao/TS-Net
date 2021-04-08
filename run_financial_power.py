@@ -63,10 +63,23 @@ parser.add_argument('--model_name', type=str, default='exc')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 args = parser.parse_args()
-
-
 device = torch.device(args.device)
 torch.set_num_threads(3)
+print(args)
+
+if args.data == 'dataset/electricity.txt':
+    args.num_nodes = 321
+
+if args.data == 'dataset/solar_AL.txt':
+    args.num_nodes = 137
+
+if args.data == 'dataset/exchange_rate.txt':
+    args.num_nodes = 8
+
+if args.data == 'dataset/traffic.txt':
+    args.num_nodes = 862
+
+print('dataset {}, the channel size is {}'.format(args.data, args.num_nodes))
 
 
 

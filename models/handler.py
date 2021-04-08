@@ -26,7 +26,7 @@ def save_model(model, model_dir, epoch=None):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08EcoDeci.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08Reorder.pt')
     with open(file_name, 'wb') as f:
         torch.save(model, f)
 
@@ -35,7 +35,7 @@ def load_model(model_dir, epoch=None):
     if not model_dir:
         return
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08EcoDeci.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08Reorder.pt')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     if not os.path.exists(file_name):
@@ -389,8 +389,8 @@ def train(train_data, valid_data, test_data, args, result_file, writer):
                 print('got best test result:', test_metrics)
                 
             # save model
-            # if is_best_for_now:
-            #     save_model(model, result_file)
+            if is_best_for_now:
+                save_model(model, result_file)
             # if epoch%4==0:
             #     save_model(model, result_file,epoch=epoch)
         # early stop

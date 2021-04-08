@@ -74,7 +74,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}_0'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_ReOrder'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()

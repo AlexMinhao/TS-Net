@@ -295,55 +295,62 @@ class EncoderTree(nn.Module):
 
         x = torch.cat(det, 2)  # torch.Size([32, 307, 12])
 
-        # if self.ecoder:
-        #     x_reorder.append(x[:, :, 9].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 3].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 6].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 0].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 10].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 4].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 7].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 1].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 11].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 5].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 8].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 2].unsqueeze(2))
-        # else:
-        #     x_reorder.append(x[:, :, 18].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 6].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 12].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 0].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 19].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 7].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 13].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 1].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 20].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 8].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 14].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 2].unsqueeze(2))
-        #
-        #     x_reorder.append(x[:, :, 21].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 9].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 15].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 3].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 22].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 10].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 16].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 4].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 23].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 11].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 17].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 5].unsqueeze(2))
-        #
-        # x_reorder = torch.cat(x_reorder, 2)
+        if self.ecoder:
+            x_reorder.append(x[:, :, 9].unsqueeze(2))
+            x_reorder.append(x[:, :, 3].unsqueeze(2))
+            x_reorder.append(x[:, :, 6].unsqueeze(2))
+            x_reorder.append(x[:, :, 0].unsqueeze(2))
+            x_reorder.append(x[:, :, 10].unsqueeze(2))
+            x_reorder.append(x[:, :, 4].unsqueeze(2))
+            x_reorder.append(x[:, :, 7].unsqueeze(2))
+            x_reorder.append(x[:, :, 1].unsqueeze(2))
+            x_reorder.append(x[:, :, 11].unsqueeze(2))
+            x_reorder.append(x[:, :, 5].unsqueeze(2))
+            x_reorder.append(x[:, :, 8].unsqueeze(2))
+            x_reorder.append(x[:, :, 2].unsqueeze(2))
+        else:
+            x_reorder.append(x[:, :, 18].unsqueeze(2))
+            x_reorder.append(x[:, :, 6].unsqueeze(2))
+            x_reorder.append(x[:, :, 12].unsqueeze(2))
+            x_reorder.append(x[:, :, 0].unsqueeze(2))
+            x_reorder.append(x[:, :, 19].unsqueeze(2))
+            x_reorder.append(x[:, :, 7].unsqueeze(2))
+            x_reorder.append(x[:, :, 13].unsqueeze(2))
+            x_reorder.append(x[:, :, 1].unsqueeze(2))
+            x_reorder.append(x[:, :, 20].unsqueeze(2))
+            x_reorder.append(x[:, :, 8].unsqueeze(2))
+            x_reorder.append(x[:, :, 14].unsqueeze(2))
+            x_reorder.append(x[:, :, 2].unsqueeze(2))
 
-        # x = x_reorder.permute(0, 2, 1)
-        x = x.permute(0, 2, 1)
+            x_reorder.append(x[:, :, 21].unsqueeze(2))
+            x_reorder.append(x[:, :, 9].unsqueeze(2))
+            x_reorder.append(x[:, :, 15].unsqueeze(2))
+            x_reorder.append(x[:, :, 3].unsqueeze(2))
+            x_reorder.append(x[:, :, 22].unsqueeze(2))
+            x_reorder.append(x[:, :, 10].unsqueeze(2))
+            x_reorder.append(x[:, :, 16].unsqueeze(2))
+            x_reorder.append(x[:, :, 4].unsqueeze(2))
+            x_reorder.append(x[:, :, 23].unsqueeze(2))
+            x_reorder.append(x[:, :, 11].unsqueeze(2))
+            x_reorder.append(x[:, :, 17].unsqueeze(2))
+            x_reorder.append(x[:, :, 5].unsqueeze(2))
+
+        x_reorder = torch.cat(x_reorder, 2)
+
+        x = x_reorder.permute(0, 2, 1)
+        # x = x.permute(0, 2, 1)
         if self.norm is not None:
             x = self.norm(x)  #torch.Size([16, 512, 336])
 
         return x
 
+class Chomp1d(nn.Module):
+    def __init__(self, chomp_size):
+        super(Chomp1d, self).__init__()
+        self.chomp_size = chomp_size
+
+    def forward(self, x):
+        return x[:, :, :-self.chomp_size].contiguous()
 
 
 class WASN(nn.Module):
@@ -357,27 +364,35 @@ class WASN(nn.Module):
 
         # First convolution
 
-        if first_conv != 3 and first_conv != 9 and first_conv != NB_SENSOR_CHANNELS:
-            self.first_conv = True
-            self.conv1 = nn.Sequential(
-                weight_norm(nn.Conv1d(first_conv, first_conv,
-                          kernel_size=2, stride=1, padding=1, bias=False)),
-                # nn.BatchNorm1d(extend_channel),
 
-                nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                nn.Dropout(0.5),
-                nn.Conv1d(extend_channel, extend_channel,
-                          kernel_size=2, stride=1, padding=1, bias=False),
-                nn.BatchNorm1d(extend_channel),
-                nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                nn.Dropout(0.5),
-            )
-            in_planes = extend_channel
-            out_planes = extend_channel * (number_levels + 1)
-        else:
-            self.first_conv = False
-            in_planes = first_conv
-            out_planes = first_conv * (number_levels + 1)
+        # self.first_conv = False
+        # self.conv_first = nn.Sequential(
+        #     weight_norm(nn.Conv1d(first_conv, args.hidden_size * first_conv,
+        #               kernel_size=2, stride=1, padding=1, bias=False)),
+        #     # nn.BatchNorm1d(extend_channel),
+        #     Chomp1d(1),
+        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     nn.Dropout(0.5),
+        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     #
+        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     # nn.Dropout(0.5),
+        # )
+        # self.conv_Second = nn.Sequential(
+        #     weight_norm(nn.Conv1d(first_conv, args.hidden_size * first_conv,
+        #                           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     # nn.BatchNorm1d(extend_channel),
+        #     Chomp1d(1),
+        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     nn.Dropout(0.5),
+        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     #
+        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     # nn.Dropout(0.5),
+        # )
+
 
 
         in_planes = first_conv
@@ -487,6 +502,10 @@ class WASN(nn.Module):
             else:
                 x += self.get_position_encoding(x)
         res1 = x
+        # if self.first_conv:
+        #     x = x.permute(0,2,1)
+        #     x = self.conv_first(x)
+        #     x = x.permute(0, 2, 1)
 
         x = self.blocks1(x, attn_mask=None)
 
@@ -497,6 +516,12 @@ class WASN(nn.Module):
 
         x = torch.cat((res1, x), dim=1)
         res2 = x
+
+        # if self.first_conv:
+        #     x = x.permute(0,2,1)
+        #     x = self.conv_Second(x)
+        #     x = x.permute(0, 2, 1)
+
         x = self.blocks2(x, attn_mask=None)
         x += res2
         x = self.projection2(x)

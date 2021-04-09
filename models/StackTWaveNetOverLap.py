@@ -1,4 +1,3 @@
-
 import numpy as np
 
 import math
@@ -6,7 +5,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
 
 import json
 from numpy.lib.stride_tricks import as_strided as ast
@@ -19,13 +17,7 @@ import pickle as cp
 import pywt
 from torch.nn.utils import weight_norm
 
-
 import argparse
-
-
-
-
-
 
 
 class Splitting(nn.Module):
@@ -37,6 +29,7 @@ class Splitting(nn.Module):
 
     def even(self, x):
         return x[:, ::2, :]
+
     def odd(self, x):
         return x[:, 1::2, :]
 
@@ -49,12 +42,9 @@ class Splitting(nn.Module):
         return (self.even(x), self.odd(x))
 
 
-
-
-
-
 class LiftingScheme(nn.Module):
-    def __init__(self, args, in_planes, modified=False, size=[], splitting=True, k_size=4, dropout=0.5, simple_lifting=False):
+    def __init__(self, args, in_planes, modified=False, size=[], splitting=True, k_size=4, dropout=0.5,
+                 simple_lifting=False):
         super(LiftingScheme, self).__init__()
         self.modified = args.INN
 
@@ -166,15 +156,16 @@ class LiftingScheme(nn.Module):
 
 
 class LiftingSchemeLevel(nn.Module):
-    def __init__(self, args, in_planes, share_weights, modified=False, size=[2, 1], kernel_size=4, simple_lifting=False):
+    def __init__(self, args, in_planes, share_weights, modified=False, size=[2, 1], kernel_size=4,
+                 simple_lifting=False):
         super(LiftingSchemeLevel, self).__init__()
         self.level = LiftingScheme(args,
-            in_planes=in_planes, modified=modified,
-            size=size, k_size=kernel_size, simple_lifting=simple_lifting)
+                                   in_planes=in_planes, modified=modified,
+                                   size=size, k_size=kernel_size, simple_lifting=simple_lifting)
 
     def forward(self, x):
         '''Returns (LL, LH, HL, HH)'''
-       # (L, H)
+        # (L, H)
         (x_even_update, x_odd_update) = self.level(x)  # 10 3 224 224
 
         return (x_even_update, x_odd_update)
@@ -250,69 +241,19 @@ class LevelWASN(nn.Module):
             return approx.permute(0, 2, 1), r, details
 
 
-
 class EncoderTree(nn.Module):
-    def __init__(self, level_layers,  level_parts, Encoder = True, norm_layer=None):
+    def __init__(self, level_layers, level_parts, Encoder=True, norm_layer=None):
         super(EncoderTree, self).__init__()
         self.level_layers = nn.ModuleList(level_layers)
-        self.conv_layers = None #nn.ModuleList(conv_layers) if conv_layers is not None else None
+        self.conv_layers = None  # nn.ModuleList(conv_layers) if conv_layers is not None else None
         self.norm = norm_layer
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
-        self.level_part = level_parts #[[0, 1], [0, 0]]
+        self.level_part = level_parts  # [[0, 1], [0, 0]]
 
         self.count_levels = 0
         self.ecoder = Encoder
 
-    def reOrder(self, num_of_length, layer=2):
-        N = num_of_length
-        n = list(range(1, N + 1, 1))
-        remain = [i % 2 for i in n]
-        integ = [int(i / 2) for i in n]
-        n_1 = []
-        for i in range(N):
-            if remain[i] > 0:
-                n_1.append((n[i] + 1) / 2 + N / 2)
-            else:
-                n_1.append(n[i] / 2)
-
-        remain = [i % 2 for i in n_1]
-        integ = [int(i / 2) for i in n_1]
-
-        n_2 = []
-        index = list(range(int(N / 4), 0, -1))
-        for i in range(N):
-            if remain[i] > 0:
-                r = int(((n_1[i] + 1) / 2) % (N / 4))
-                if r == 0:
-                    r = int(N / 4)
-
-                n_2.append(int(n_1[i] + index[r - 1]))
-            else:
-                r = int((n_1[i] / 2) % (N / 4))
-                if r == 0:
-                    r = int(N / 4)
-                n_2.append(int(n_1[i] - r))
-        n_3 = []
-        rem4 = [i % 4 for i in n_2]
-        for i in range(N):
-            if rem4[i] == 1:
-                n_3.append(n_2[i] + 2)
-            elif rem4[i] == 3:
-                n_3.append(n_2[i] + 1)
-            elif rem4[i] == 0:
-                n_3.append(n_2[i] - 2)
-            elif rem4[i] == 2:
-                n_3.append(n_2[i] - 1)
-            else:
-                print("Error!")
-        if layer == 2:
-            return [i - 1 for i in n_2]
-        if layer == 3:
-            return [i - 1 for i in n_3]
-
-
     def forward(self, x, attn_mask=None):
-
         # x [B, L, D] torch.Size([16, 336, 512])
         rs = []  # List of constrains on details and mean
         det = []  # List of averaged pooled details
@@ -344,58 +285,56 @@ class EncoderTree(nn.Module):
         # We add them inside the all GAP detail coefficients
 
         x = torch.cat(det, 2)  # torch.Size([32, 307, 12])
-        index = self.reOrder(x.shape[2], layer=2)
-        x_reorder = [x[:, :, i].unsqueeze(2) for i in index]
-        # if self.ecoder:
-        #     # x_reorder.append(x[:, :, 9].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 3].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 6].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 0].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 10].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 4].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 7].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 1].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 11].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 5].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 8].unsqueeze(2))
-        #     # x_reorder.append(x[:, :, 2].unsqueeze(2))
-        #     order_1 = self.reOrder(12)
-        #
-        # else:
-        #     x_reorder.append(x[:, :, 18].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 6].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 12].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 0].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 19].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 7].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 13].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 1].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 20].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 8].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 14].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 2].unsqueeze(2))
-        #
-        #     x_reorder.append(x[:, :, 21].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 9].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 15].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 3].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 22].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 10].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 16].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 4].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 23].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 11].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 17].unsqueeze(2))
-        #     x_reorder.append(x[:, :, 5].unsqueeze(2))
-        #
+
+        if self.ecoder:
+            x_reorder.append(x[:, :, 9].unsqueeze(2))
+            x_reorder.append(x[:, :, 3].unsqueeze(2))
+            x_reorder.append(x[:, :, 6].unsqueeze(2))
+            x_reorder.append(x[:, :, 0].unsqueeze(2))
+            x_reorder.append(x[:, :, 10].unsqueeze(2))
+            x_reorder.append(x[:, :, 4].unsqueeze(2))
+            x_reorder.append(x[:, :, 7].unsqueeze(2))
+            x_reorder.append(x[:, :, 1].unsqueeze(2))
+            x_reorder.append(x[:, :, 11].unsqueeze(2))
+            x_reorder.append(x[:, :, 5].unsqueeze(2))
+            x_reorder.append(x[:, :, 8].unsqueeze(2))
+            x_reorder.append(x[:, :, 2].unsqueeze(2))
+        else:
+            x_reorder.append(x[:, :, 18].unsqueeze(2))
+            x_reorder.append(x[:, :, 6].unsqueeze(2))
+            x_reorder.append(x[:, :, 12].unsqueeze(2))
+            x_reorder.append(x[:, :, 0].unsqueeze(2))
+            x_reorder.append(x[:, :, 19].unsqueeze(2))
+            x_reorder.append(x[:, :, 7].unsqueeze(2))
+            x_reorder.append(x[:, :, 13].unsqueeze(2))
+            x_reorder.append(x[:, :, 1].unsqueeze(2))
+            x_reorder.append(x[:, :, 20].unsqueeze(2))
+            x_reorder.append(x[:, :, 8].unsqueeze(2))
+            x_reorder.append(x[:, :, 14].unsqueeze(2))
+            x_reorder.append(x[:, :, 2].unsqueeze(2))
+
+            x_reorder.append(x[:, :, 21].unsqueeze(2))
+            x_reorder.append(x[:, :, 9].unsqueeze(2))
+            x_reorder.append(x[:, :, 15].unsqueeze(2))
+            x_reorder.append(x[:, :, 3].unsqueeze(2))
+            x_reorder.append(x[:, :, 22].unsqueeze(2))
+            x_reorder.append(x[:, :, 10].unsqueeze(2))
+            x_reorder.append(x[:, :, 16].unsqueeze(2))
+            x_reorder.append(x[:, :, 4].unsqueeze(2))
+            x_reorder.append(x[:, :, 23].unsqueeze(2))
+            x_reorder.append(x[:, :, 11].unsqueeze(2))
+            x_reorder.append(x[:, :, 17].unsqueeze(2))
+            x_reorder.append(x[:, :, 5].unsqueeze(2))
+
         x_reorder = torch.cat(x_reorder, 2)
 
         x = x_reorder.permute(0, 2, 1)
         # x = x.permute(0, 2, 1)
         if self.norm is not None:
-            x = self.norm(x)  #torch.Size([16, 512, 336])
+            x = self.norm(x)  # torch.Size([16, 512, 336])
 
         return x
+
 
 class Chomp1d(nn.Module):
     def __init__(self, chomp_size):
@@ -407,16 +346,12 @@ class Chomp1d(nn.Module):
 
 
 class WASN(nn.Module):
-    def __init__(self, args, num_classes, num_stacks = 3 , first_conv=9,
+    def __init__(self, args, num_classes, num_stacks=3, first_conv=9,
                  number_levels=4, number_level_part=[[1, 0], [1, 0], [1, 0]],
                  no_bootleneck=True):
         super(WASN, self).__init__()
 
-
-
-
         # First convolution
-
 
         # self.first_conv = False
         # self.conv_first = nn.Sequential(
@@ -446,24 +381,21 @@ class WASN(nn.Module):
         #     # nn.Dropout(0.5),
         # )
 
-
-
         in_planes = first_conv
         out_planes = first_conv * (number_levels + 1)
         self.pe = args.positionalEcoding
 
         self.blocks1 = EncoderTree(
             [
-            LevelWASN(args = args, in_planes=in_planes,
-                      lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
-                      share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
+                LevelWASN(args=args, in_planes=in_planes,
+                          lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
+                          share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
 
-            for l in range(number_levels)
+                for l in range(number_levels)
             ],
 
-
-            level_parts = number_level_part,
-            Encoder = True
+            level_parts=number_level_part,
+            Encoder=True
         )
 
         self.blocks2 = EncoderTree(
@@ -475,17 +407,14 @@ class WASN(nn.Module):
                 for l in range(number_levels)
             ],
 
-
-            level_parts= number_level_part,
-             Encoder = False
+            level_parts=number_level_part,
+            Encoder=True
         )
 
         if no_bootleneck:
             in_planes *= 1
 
         self.num_planes = out_planes
-
-
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -499,19 +428,16 @@ class WASN(nn.Module):
                 # if m.bias is not None:
                 m.bias.data.zero_()
 
-
         self.projection1 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection2 = nn.Conv1d(args.window_size+num_classes, num_classes,
+        self.projection2 = nn.Conv1d(args.window_size, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-
-        
-        self.hidden_size = in_planes 
+        self.hidden_size = in_planes
         # For positional encoding
-        if self.hidden_size%2 == 1:
-           self.hidden_size += 1
+        if self.hidden_size % 2 == 1:
+            self.hidden_size += 1
 
         num_timescales = self.hidden_size // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
         max_timescale = 10000.0
@@ -526,39 +452,35 @@ class WASN(nn.Module):
             torch.arange(num_timescales, dtype=torch.float32) *
             -log_timescale_increment)  # 将log(max/min)均分num_timescales份数(词维度一半)
         self.register_buffer('inv_timescales', inv_timescales)
+
     def get_position_encoding(self, x):
         max_length = x.size()[1]
         position = torch.arange(max_length, dtype=torch.float32,
-                                device=x.device) #tensor([0., 1., 2., 3., 4.], device='cuda:0')
-        temp1 = position.unsqueeze(1) #5 1
-        temp2 = self.inv_timescales.unsqueeze(0) #1 256
-        scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0) #5 256
+                                device=x.device)  # tensor([0., 1., 2., 3., 4.], device='cuda:0')
+        temp1 = position.unsqueeze(1)  # 5 1
+        temp2 = self.inv_timescales.unsqueeze(0)  # 1 256
+        scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0)  # 5 256
         signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)],
-                           dim=1) #5 512 [T, C]
+                           dim=1)  # 5 512 [T, C]
         signal = F.pad(signal, (0, 0, 0, self.hidden_size % 2))
         signal = signal.view(1, max_length, self.hidden_size)
-
-
 
         # signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
         # if self.hidden_size % 2==1:
         #     signal = signal[:,1:]
         # signal = signal.view(1, max_length, self.hidden_size)
-       
+
         return signal
 
     def forward(self, x):
         if self.pe:
             pe = self.get_position_encoding(x)
-            if pe.shape[2]>x.shape[2]:
-                x += pe[:,:,:-1]
+            if pe.shape[2] > x.shape[2]:
+                x += pe[:, :, :-1]
             else:
                 x += self.get_position_encoding(x)
         res1 = x
-        # if self.first_conv:
-        #     x = x.permute(0,2,1)
-        #     x = self.conv_first(x)
-        #     x = x.permute(0, 2, 1)
+
 
         x = self.blocks1(x, attn_mask=None)
 
@@ -567,32 +489,18 @@ class WASN(nn.Module):
         x = self.projection1(x)
         MidOutPut = x
 
-        x = torch.cat((res1, x), dim=1)
-        res2 = x
 
-        # if self.first_conv:
-        #     x = x.permute(0,2,1)
-        #     x = self.conv_Second(x)
-        #     x = x.permute(0, 2, 1)
+        res2 = x
 
         x = self.blocks2(x, attn_mask=None)
         x += res2
         x = self.projection2(x)
-        return x, MidOutPut
-
-
-
-
-
-
-
+        return x, MidOutPut[:,6:12,:]
 
 
 def get_variable(x):
     x = Variable(x)
     return x.cuda() if torch.cuda.is_available() else x
-
-
 
 
 if __name__ == '__main__':
@@ -639,5 +547,5 @@ if __name__ == '__main__':
                  number_levels=len(part),
                  number_level_part=part).cuda()
     x = torch.randn(32, 12, 307).cuda()
-    y,res = model(x)
+    y, res = model(x)
     print(y.shape)

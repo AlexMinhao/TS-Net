@@ -360,8 +360,6 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     print('TEST_Each_final Corr:', corr_final_each)
 
 
-
-
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
@@ -398,21 +396,20 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
 #===================
 
-
     predict = forecast_Norm.cpu().numpy()
     Ytest = target_Norm.cpu().numpy()
-    # np.save('F:\\school\\Papers\\timeseriesNew\\MTGNN-master\\output\\Ytest_nolinear.npy', Ytest)
+
     sigma_p = (predict).std(axis=0)
     sigma_g = (Ytest).std(axis=0)
     mean_p = predict.mean(axis=0)
     mean_g = Ytest.mean(axis=0)
     index = (sigma_g != 0)
-    correlation1 = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation1 = (correlation1[index]).mean()
+    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation = (correlation[index]).mean()
 
     print(
-        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr  {:5.4f} =>  {:5.4f}'.format(
-            rse, rae, correlation,correlation1), flush=True)
+        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(
+            rse, rae, correlation), flush=True)
 
     print(
         '|Test_mid rse {:5.4f} | Test_mid rae {:5.4f} | Test_mid corr  {:5.4f}'.format(

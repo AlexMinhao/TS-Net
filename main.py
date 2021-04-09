@@ -2,7 +2,7 @@ import os
 import torch
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
-from models.handler import train, trainSemi, trainEco2Deco, test,retrain
+from models.handler import train, trainSemi, trainEco2Deco, test, trainOverLap, retrain
 import argparse
 import pandas as pd
 import numpy as np
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}_ReOrder'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_Normal_ReorderAlg'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()
@@ -90,6 +90,12 @@ if __name__ == '__main__':
                 after_train = datetime.now().timestamp()
                 print(f'Training took {(after_train - before_train) / 60} minutes')
                 print("===================TwoDecoder-End=========================")
+            elif args.model_name == "OverLap":
+                print("===================OverLap-Start=========================")
+                _, normalize_statistic = trainOverLap(train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
+                print("===================OverLap-End=========================")
             else:
                 print("===================Normal-Start=========================")
                 _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)

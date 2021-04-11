@@ -11,8 +11,9 @@ import importlib
 from util_financial import *
 
 # from StackTWNet import WASN
-from models.StackTWaveNetTransformerEncoder import WASN
+# from models.StackTWaveNetTransformerEncoder import WASN
 # from models.OriginalStackTWaveNetTransformerEncoder import WASN
+from models.IDCN import IDCNet
 
 
 from tensorboardX import SummaryWriter
@@ -596,7 +597,7 @@ def main_run():
 
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
     # part = [[1, 1], [0, 0], [0, 0]]  # Best model
-    model = WASN(args, num_classes=args.horizon, num_stacks = 1, first_conv=args.num_nodes,
+    model = IDCNet(args, num_classes = args.horizon, input_dim = args.num_nodes,
                  number_levels=len(part),
                  number_level_part=part).cuda()
     model = model.to(device)

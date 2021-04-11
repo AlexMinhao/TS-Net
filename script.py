@@ -7,17 +7,17 @@ lr = [0.001]
 
 epoch = [100]
 hid  = [1]
-bt = [8,16]
+bt = [8]
 # head = [8,  16 , 32]
 # pred_len = [128, 168]
 stacks = [1]
-type = [1,6,9]
+type = [6,9]
 
 for t in type:
     for h in hid:
         for l in lr:
             for b in bt:
-                    cmd = """python -u main.py --lr {} --batch_size {} --hidden-size {} --lradj {} > log/Semi_PeMS08_12to12_bt{}_epoch80_lr{}type{}_hid{}_2Decor.log 2>&1""".format(l,b,h,t,b,l,t,h)
+                    cmd = """python -u main.py --lr {} --batch_size {} --hidden-size {} --lradj {} > log/FirstConvResReOrderTrue_PeMS08_12to12_bt{}_epoch50_lr{}type{}_hid{}.log 2>&1""".format(l,b,h,t,b,l,t,h)
                     print(cmd)
                     call(cmd, shell=True)
 print('Finish!')

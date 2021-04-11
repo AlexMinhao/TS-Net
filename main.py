@@ -18,7 +18,7 @@ parser.add_argument('--horizon', type=int, default=12)
 parser.add_argument('--train_length', type=float, default=6)
 parser.add_argument('--valid_length', type=float, default=2)
 parser.add_argument('--test_length', type=float, default=2)
-parser.add_argument('--epoch', type=int, default=80)
+parser.add_argument('--epoch', type=int, default=50)
 parser.add_argument('--lr', type=float, default=0.001)
 
 parser.add_argument('--device', type=str, default='cuda:0')
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}_Normal_ReorderAlg'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_FirstConv_ReorderAlg'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()

@@ -294,12 +294,10 @@ def adjust_learning_rate(optimizer, epoch, args):
 def train(train_data, valid_data, test_data, args, result_file, writer):
     node_cnt = train_data.shape[1]
 
-    # part = [[1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    # part = [[1, 1], [1,1], [1,1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
+
     print("===================Train Normal=========================")
     part = [[1, 1], [0, 0], [0, 0]]
-    # # part = [[0, 1], [0, 0]]
-    # part = [[0, 0]]
+
     print('level number {}, level details: {}'.format(len(part), part))
     model = WASN(args, num_classes=args.horizon, num_stacks = args.num_stacks, first_conv = args.input_dim,
                       number_levels=len(part),

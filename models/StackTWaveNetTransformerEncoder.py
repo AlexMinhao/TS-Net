@@ -346,7 +346,7 @@ class EncoderTree(nn.Module):
         x = torch.cat(det, 2)  # torch.Size([32, 307, 12])
         index = self.reOrder(x.shape[2], layer=2)
         x_reorder = [x[:, :, i].unsqueeze(2) for i in index]
-        
+
         x_reorder = torch.cat(x_reorder, 2)
 
         x = x_reorder.permute(0, 2, 1)
@@ -377,33 +377,33 @@ class WASN(nn.Module):
         # First convolution
 
 
-        # self.first_conv = False
-        # self.conv_first = nn.Sequential(
-        #     weight_norm(nn.Conv1d(first_conv, args.hidden_size * first_conv,
-        #               kernel_size=2, stride=1, padding=1, bias=False)),
-        #     # nn.BatchNorm1d(extend_channel),
-        #     Chomp1d(1),
-        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     nn.Dropout(0.5),
-        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     #
-        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     # nn.Dropout(0.5),
-        # )
-        # self.conv_Second = nn.Sequential(
-        #     weight_norm(nn.Conv1d(first_conv, args.hidden_size * first_conv,
-        #                           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     # nn.BatchNorm1d(extend_channel),
-        #     Chomp1d(1),
-        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     nn.Dropout(0.5),
-        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     #
-        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     # nn.Dropout(0.5),
-        # )
+        self.first_conv = True
+        self.conv_first = nn.Sequential(
+            weight_norm(nn.Conv1d(first_conv, int(args.hidden_size * first_conv),
+                      kernel_size=2, stride=1, padding=1, bias=False)),
+            # nn.BatchNorm1d(extend_channel),
+            Chomp1d(1),
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            nn.Dropout(0.5),
+            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+            #           kernel_size=2, stride=1, padding=1, bias=False)),
+            #
+            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            # nn.Dropout(0.5),
+        )
+        self.conv_Second = nn.Sequential(
+            weight_norm(nn.Conv1d(first_conv, int(args.hidden_size * first_conv),
+                                  kernel_size=2, stride=1, padding=1, bias=False)),
+            # nn.BatchNorm1d(extend_channel),
+            Chomp1d(1),
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            nn.Dropout(0.5),
+            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+            #           kernel_size=2, stride=1, padding=1, bias=False)),
+            #
+            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            # nn.Dropout(0.5),
+        )
 
 
 
@@ -514,10 +514,11 @@ class WASN(nn.Module):
             else:
                 x += self.get_position_encoding(x)
         res1 = x
-        # if self.first_conv:
-        #     x = x.permute(0,2,1)
-        #     x = self.conv_first(x)
-        #     x = x.permute(0, 2, 1)
+        if self.first_conv:
+            x = x.permute(0,2,1)
+            x = self.conv_first(x)
+            x = x.permute(0, 2, 1)
+        res1 = x
 
         x = self.blocks1(x, attn_mask=None)
 
@@ -527,12 +528,14 @@ class WASN(nn.Module):
         MidOutPut = x
 
         x = torch.cat((res1, x), dim=1)
-        res2 = x
+        # res2 = x
 
         # if self.first_conv:
         #     x = x.permute(0,2,1)
         #     x = self.conv_Second(x)
         #     x = x.permute(0, 2, 1)
+
+        res2 = x
 
         x = self.blocks2(x, attn_mask=None)
         x += res2

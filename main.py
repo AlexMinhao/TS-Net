@@ -44,6 +44,7 @@ parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--positionalEcoding', type = bool , default=True)
 parser.add_argument('--num_concat', type=int, default=21)
+parser.add_argument('--normtype', type=int, default=0)
 
 
 #LSTnet

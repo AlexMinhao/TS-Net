@@ -11,14 +11,14 @@ import time
 import os
 
 from models.StackTWaveNetTransformerEncoder import WASN
-from models.ACGNet import AGCRN
+
 # from models.StackTWaveNetEnco2Deco import WASN
 # from models.StackTWaveNetEcoDecoSemi import WASN
 # from models.StackTWaveNetOverLap import WASN
 # from models.IDCN import IDCNet
 from models.LSTNet import Model
 from models.TCN import TCN
-from models.IDCN_Ecoder import IDCNet
+from models.IDCN import IDCNet
 from models.Transformer import Transformer
 
 from utils.math_utils import evaluate, creatMask
@@ -326,16 +326,39 @@ def train(data, train_data, valid_data, test_data, args, result_file, writer):
         raise Exception('Cannot organize enough validation data')
     if len(test_data) == 0:
         raise Exception('Cannot organize enough test data')
-    if args.norm_method == 'z_score':
+    # if args.norm_method == 'z_score':
+    #     train_mean = np.mean(train_data, axis=0)
+    #     train_std = np.std(train_data, axis=0)
+    #     normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
+    # elif args.norm_method == 'min_max':
+    #     train_min = np.min(train_data, axis=0)
+    #     train_max = np.max(train_data, axis=0)
+    #     normalize_statistic = {"min": train_min, "max": train_max}
+    # else:
+    #     normalize_statistic = None
+
+    if args.normtype == 0:
         train_mean = np.mean(train_data, axis=0)
         train_std = np.std(train_data, axis=0)
-        normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
-    elif args.norm_method == 'min_max':
-        train_min = np.min(train_data, axis=0)
-        train_max = np.max(train_data, axis=0)
-        normalize_statistic = {"min": train_min, "max": train_max}
+        train_normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
+        val_mean = np.mean(valid_data, axis=0)
+        val_std = np.std(valid_data, axis=0)
+        val_normalize_statistic = {"mean": val_mean.tolist(), "std": val_std.tolist()}
+        test_mean = np.mean(test_data, axis=0)
+        test_std = np.std(test_data, axis=0)
+        test_normalize_statistic = {"mean": test_mean.tolist(), "std": test_std.tolist()}
+    elif args.normtype == 1:
+        data_mean = np.mean(data, axis=0)
+        data_std = np.std(data, axis=0)
+        train_normalize_statistic = {"mean": data_mean.tolist(), "std": data_std.tolist()}
+        val_normalize_statistic = {"mean": data_mean.tolist(), "std": data_std.tolist()}
+        test_normalize_statistic = {"mean": data_mean.tolist(), "std": data_std.tolist()}
     else:
-        normalize_statistic = None
+        train_mean = np.mean(train_data, axis=0)
+        train_std = np.std(train_data, axis=0)
+        train_normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
+        val_normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
+        test_normalize_statistic = {"mean": train_mean.tolist(), "std": train_std.tolist()}
 
 
     if args.optimizer == 'RMSProp':
@@ -347,11 +370,11 @@ def train(data, train_data, valid_data, test_data, args, result_file, writer):
     my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=my_optim, gamma=args.decay_rate)
 
     train_set = ForecastDataset(train_data, window_size=args.window_size, horizon=args.horizon,
-                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+                                normalize_method=args.norm_method, norm_statistic=train_normalize_statistic)
     valid_set = ForecastDataset(valid_data, window_size=args.window_size, horizon=args.horizon,
-                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+                                normalize_method=args.norm_method, norm_statistic=val_normalize_statistic)
     test_set = ForecastDataset(test_data, window_size=args.window_size, horizon=args.horizon,
-                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
+                                normalize_method=args.norm_method, norm_statistic=test_normalize_statistic)
     train_loader = torch_data.DataLoader(train_set, batch_size=args.batch_size, drop_last=False, shuffle=True,
                                          num_workers=1)
     valid_loader = torch_data.DataLoader(valid_set, batch_size=args.batch_size, shuffle=False, num_workers=1)
@@ -416,10 +439,10 @@ def train(data, train_data, valid_data, test_data, args, result_file, writer):
             is_best_for_now = False
             print('------ validate on data: VALIDATE ------')
             performance_metrics = \
-                validate(model, epoch, forecast_loss, valid_loader, args.device, args.norm_method, normalize_statistic,
+                validate(model, epoch, forecast_loss, valid_loader, args.device, args.norm_method, val_normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
                          writer, result_file=None, test=False)
-            test_metrics=validate(model, epoch,  forecast_loss, test_loader, args.device, args.norm_method, normalize_statistic,
+            test_metrics=validate(model, epoch,  forecast_loss, test_loader, args.device, args.norm_method, test_normalize_statistic,
                          node_cnt, args.window_size, args.horizon,
                          writer, result_file=None, test=True)
             if best_validate_mae > performance_metrics['mae']:

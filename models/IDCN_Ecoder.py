@@ -466,15 +466,15 @@ class IDCNet(nn.Module):
         return signal
 
 
-    def creatMask(self, x):
-        b, l, c = x.shape
-        mask_ratio = nn.Dropout(p=0.9)
-        Mask = torch.ones(b, l, c, device=x.device)
-        Mask = mask_ratio(Mask)
-        Mask = Mask > 0  # torch.Size([8, 1, 48, 48])
-        Mask = Mask
-        x.masked_fill(Mask, 0)
-        return x
+    # def creatMask(self, x):
+    #     b, l, c = x.shape
+    #     mask_ratio = nn.Dropout(p=0.9)
+    #     Mask = torch.ones(b, l, c, device=x.device)
+    #     Mask = mask_ratio(Mask)
+    #     Mask = Mask > 0  # torch.Size([8, 1, 48, 48])
+    #     Mask = Mask
+    #     x.masked_fill(Mask, 0)
+    #     return x
 
     def forward(self, x):
         if self.pe:

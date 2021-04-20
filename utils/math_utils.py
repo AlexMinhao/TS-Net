@@ -64,4 +64,14 @@ def evaluate(y, y_hat, by_step=False, by_node=False):
         return MAPE(y, y_hat, axis=(0, 1)), MAE(y, y_hat, axis=(0, 1)), RMSE(y, y_hat, axis=(0, 1))
 
 
+def creatMask(x):
+    res = x
+    b, l, c = res.shape
+    mask_ratio = torch.nn.Dropout(p=0.2)
+    Mask = torch.ones(b, l, c, device=x.device)
+    Mask = mask_ratio(Mask)
+    Mask = Mask > 0  # torch.Size([8, 1, 48, 48])
+    Mask = Mask
+    # res.masked_fill_(Mask, 0)
+    return Mask
 

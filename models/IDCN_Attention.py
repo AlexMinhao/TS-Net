@@ -1,29 +1,125 @@
 
-import numpy as np
-
 import math
-import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch.autograd import Variable
-
-
-import json
-from numpy.lib.stride_tricks import as_strided as ast
-
 from torch import nn
-from torch import optim
 import torch
-
-import pickle as cp
-import pywt
 from torch.nn.utils import weight_norm
-
-
 import argparse
 
 
+def initialize_weight(x):
+    nn.init.xavier_uniform_(x.weight)
+    if x.bias is not None:
+        nn.init.constant_(x.bias, 0)
 
+
+class FeedForwardNetwork(nn.Module):
+    def __init__(self, hidden_size, filter_size, dropout_rate):
+        super(FeedForwardNetwork, self).__init__()
+
+        self.layer1 = nn.Linear(hidden_size, filter_size)
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(dropout_rate)
+        self.layer2 = nn.Linear(filter_size, hidden_size)
+
+        initialize_weight(self.layer1)
+        initialize_weight(self.layer2)
+
+    def forward(self, x):
+        x = self.layer1(x)
+        x = self.relu(x)
+        x = self.dropout(x)
+        x = self.layer2(x)
+        return x
+
+
+class MultiHeadAttention(nn.Module):
+    def __init__(self, hidden_size, dropout_rate, head_size=8):
+        super(MultiHeadAttention, self).__init__()
+
+        self.head_size = head_size
+
+        self.att_size = att_size = hidden_size // head_size
+        self.scale = att_size ** -0.5
+
+        self.linear_q = nn.Linear(hidden_size, head_size * att_size, bias=False)
+        self.linear_k = nn.Linear(hidden_size, head_size * att_size, bias=False)
+        self.linear_v = nn.Linear(hidden_size, head_size * att_size, bias=False)
+        initialize_weight(self.linear_q)
+        initialize_weight(self.linear_k)
+        initialize_weight(self.linear_v)
+
+        self.att_dropout = nn.Dropout(dropout_rate)
+
+        self.output_layer = nn.Linear(head_size * att_size, hidden_size,
+                                      bias=False)
+        initialize_weight(self.output_layer)
+
+    def forward(self, q, k, v, mask, cache=None):
+        orig_q_size = q.size()
+
+        d_k = self.att_size
+        d_v = self.att_size
+        batch_size = q.size(0)
+
+        # head_i = Attention(Q(W^Q)_i, K(W^K)_i, V(W^V)_i)
+        q = self.linear_q(q).view(batch_size, -1, self.head_size, d_k)
+        if cache is not None and 'encdec_k' in cache:
+            k, v = cache['encdec_k'], cache['encdec_v']
+        else:
+            k = self.linear_k(k).view(batch_size, -1, self.head_size, d_k)
+            v = self.linear_v(v).view(batch_size, -1, self.head_size, d_v)
+
+            if cache is not None:
+                cache['encdec_k'], cache['encdec_v'] = k, v
+
+        q = q.transpose(1, 2)                  # [b, h, q_len, d_k]
+        v = v.transpose(1, 2)                  # [b, h, v_len, d_v]
+        k = k.transpose(1, 2).transpose(2, 3)  # [b, h, d_k, k_len]
+
+        # Scaled Dot-Product Attention.
+        # Attention(Q, K, V) = softmax((QK^T)/sqrt(d_k))V
+        q.mul_(self.scale)
+        x = torch.matmul(q, k) # [b, h, q_len, k_len]
+        if mask is not None:
+            x.masked_fill_(mask.unsqueeze(1), -1e9)
+        x = torch.softmax(x, dim=3)
+        x = self.att_dropout(x)
+        x = x.matmul(v)  # [b, h, q_len, attn]
+
+        x = x.transpose(1, 2).contiguous()  # [b, q_len, h, attn]
+        x = x.view(batch_size, -1, self.head_size * d_v)
+
+        x = self.output_layer(x)
+
+        assert x.size() == orig_q_size
+        return x
+
+
+class Attention(nn.Module):
+    def __init__(self, hidden_size, filter_size, dropout_rate):
+        super(Attention, self).__init__()
+
+        self.self_attention_norm = nn.LayerNorm(hidden_size, eps=1e-6)
+        self.self_attention = MultiHeadAttention(hidden_size, dropout_rate)
+        self.self_attention_dropout = nn.Dropout(dropout_rate)
+
+        self.ffn_norm = nn.LayerNorm(hidden_size, eps=1e-6)
+        self.ffn = FeedForwardNetwork(hidden_size, filter_size, dropout_rate)
+        self.ffn_dropout = nn.Dropout(dropout_rate)
+
+    def forward(self, x, mask = None):  # pylint: disable=arguments-differ
+        y = self.self_attention_norm(x)
+        y = self.self_attention(y, y, y, mask)  #torch.Size([10, 5, 512])
+        y = self.self_attention_dropout(y)
+        x = x + y
+
+        y = self.ffn_norm(x)
+        y = self.ffn(y)
+        y = self.ffn_dropout(y)
+        x = x + y
+        return x
 
 
 
@@ -37,29 +133,23 @@ class Splitting(nn.Module):
 
     def even(self, x):
         return x[:, ::2, :]
+
     def odd(self, x):
         return x[:, 1::2, :]
-
-    # def forward(self, x):
-    #     '''Returns the odd and even part'''
-    #     return (self.conv_even(x), self.conv_odd(x))
 
     def forward(self, x):
         '''Returns the odd and even part'''
         return (self.even(x), self.odd(x))
 
 
-
-
-
-
-class LiftingScheme(nn.Module):
-    def __init__(self, args, in_planes, modified=False, size=[], splitting=True, k_size=4, dropout=0.5, simple_lifting=False):
-        super(LiftingScheme, self).__init__()
+class Interactor(nn.Module):
+    def __init__(self, args, in_planes, splitting=True, dropout=0.5,
+                 simple_lifting=False):
+        super(Interactor, self).__init__()
         self.modified = args.INN
-
         kernel_size = args.kernel
         dilation = args.dilation
+
         pad = dilation * (kernel_size - 1) // 2 + 1  # 2 1 0 0
         # pad = k_size // 2
         self.splitting = splitting
@@ -165,16 +255,17 @@ class LiftingScheme(nn.Module):
             return (c, d)
 
 
-class LiftingSchemeLevel(nn.Module):
-    def __init__(self, args, in_planes, share_weights, modified=False, size=[2, 1], kernel_size=4, simple_lifting=False):
-        super(LiftingSchemeLevel, self).__init__()
-        self.level = LiftingScheme(args,
-            in_planes=in_planes, modified=modified,
-            size=size, k_size=kernel_size, simple_lifting=simple_lifting)
+class InteractorLevel(nn.Module):
+    def __init__(self, args, in_planes,
+                 simple_lifting=False):
+        super(InteractorLevel, self).__init__()
+        self.level = Interactor(args,
+                                   in_planes=in_planes,
+                                   simple_lifting=simple_lifting)
 
     def forward(self, x):
         '''Returns (LL, LH, HL, HH)'''
-       # (L, H)
+        # (L, H)
         (x_even_update, x_odd_update) = self.level(x)  # 10 3 224 224
 
         return (x_even_update, x_odd_update)
@@ -199,17 +290,16 @@ class BottleneckBlock(nn.Module):
             return self.conv1(self.relu(self.bn1(x)))
 
 
-class LevelWASN(nn.Module):
+class LevelIDCN(nn.Module):
     def __init__(self, args, in_planes, lifting_size, kernel_size, no_bottleneck,
                  share_weights, simple_lifting, regu_details, regu_approx):
-        super(LevelWASN, self).__init__()
+        super(LevelIDCN, self).__init__()
         self.regu_details = regu_details
         self.regu_approx = regu_approx
         if self.regu_approx + self.regu_details > 0.0:
             self.loss_details = nn.SmoothL1Loss()
 
-        self.wavelet = LiftingSchemeLevel(args, in_planes, share_weights,
-                                          size=lifting_size, kernel_size=kernel_size,
+        self.interact = InteractorLevel(args, in_planes,
                                           simple_lifting=simple_lifting)
         self.share_weights = share_weights
         if no_bottleneck:
@@ -220,45 +310,23 @@ class LevelWASN(nn.Module):
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=False)
 
     def forward(self, x):
-        (x_even_update, x_odd_update) = self.wavelet(x)  # 10 9 128
-        approx = x_even_update
-        details = x_odd_update
-        r = None
-        if (self.regu_approx + self.regu_details != 0.0):  # regu_details=0.01, regu_approx=0.01
+        (x_even_update, x_odd_update) = self.interact(x)  # 10 9 128
 
-            if self.regu_details:
-                rd = self.regu_details * \
-                     details.abs().mean()
-
-            # Constrain on the approximation
-            if self.regu_approx:
-                rc = self.regu_approx * torch.dist(approx.mean(), x.mean(), p=2)
-
-            if self.regu_approx == 0.0:
-                # Only the details
-                r = rd
-            elif self.regu_details == 0.0:
-                # Only the approximation
-                r = rc
-            else:
-                # Both
-                r = rd + rc
 
         if self.bootleneck:
-            return self.bootleneck(approx).permute(0, 2, 1), r, details
+            return self.bootleneck(x_even_update).permute(0, 2, 1), x_odd_update
         else:
-            return approx.permute(0, 2, 1), r, details
-
+            return x_even_update.permute(0, 2, 1),x_odd_update
 
 
 class EncoderTree(nn.Module):
-    def __init__(self, level_layers,  level_parts, Encoder = True, norm_layer=None):
+    def __init__(self, level_layers, level_parts, Encoder=True, norm_layer=None):
         super(EncoderTree, self).__init__()
         self.level_layers = nn.ModuleList(level_layers)
-        self.conv_layers = None #nn.ModuleList(conv_layers) if conv_layers is not None else None
+        self.conv_layers = None  # nn.ModuleList(conv_layers) if conv_layers is not None else None
         self.norm = norm_layer
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
-        self.level_part = level_parts #[[0, 1], [0, 0]]
+        self.level_part = level_parts  # [[0, 1], [0, 0]]
 
         self.count_levels = 0
         self.ecoder = Encoder
@@ -267,7 +335,7 @@ class EncoderTree(nn.Module):
         N = num_of_length
         n = list(range(1, N + 1, 1))
         remain = [i % 2 for i in n]
-        integ = [int(i / 2) for i in n]
+
         n_1 = []
         for i in range(N):
             if remain[i] > 0:
@@ -276,25 +344,22 @@ class EncoderTree(nn.Module):
                 n_1.append(n[i] / 2)
 
         remain = [i % 2 for i in n_1]
-        integ = [int(i / 2) for i in n_1]
+
 
         n_2 = []
-        rem4 = [i % 4 for i in n]
-
+        index = list(range(int(N / 4), 0, -1))
         for i in range(N):
-            if rem4[i] == 0:
-                n_2.append(int(n[i] / 4))
+            if remain[i] > 0:
+                r = int(((n_1[i] + 1) / 2) % (N / 4))
+                if r == 0:
+                    r = int(N / 4)
 
-            elif rem4[i] == 1:
-
-                n_2.append(int((3 * N + 3) / 4 + n[i] / 4))
-            elif rem4[i] == 2:
-                n_2.append(int((1 * N + 2) / 4 + n[i] / 4))
-            elif rem4[i] == 3:
-                n_2.append(int((2 * N + 1) / 4 + n[i] / 4))
+                n_2.append(int(n_1[i] + index[r - 1]))
             else:
-                print("Error!")
-
+                r = int((n_1[i] / 2) % (N / 4))
+                if r == 0:
+                    r = int(N / 4)
+                n_2.append(int(n_1[i] - r))
         n_3 = []
         rem8 = [i % 8 for i in n]
         for i in range(N):
@@ -317,23 +382,19 @@ class EncoderTree(nn.Module):
 
             else:
                 print("Error!")
-        if layer == 1:
-            return [i - 1 for i in n_1]
         if layer == 2:
             return [i - 1 for i in n_2]
         if layer == 3:
             return [i - 1 for i in n_3]
 
-
     def forward(self, x, attn_mask=None):
 
         # x [B, L, D] torch.Size([16, 336, 512])
-        rs = []  # List of constrains on details and mean
+
         det = []  # List of averaged pooled details
-        x_reorder = []
         input = [x, ]
         for l in self.level_layers:
-            x_even_update, r, x_odd_update = l(input[0])
+            x_even_update, x_odd_update = l(input[0])
 
             if self.level_part[self.count_levels][0]:
                 input.append(x_even_update)
@@ -346,7 +407,7 @@ class EncoderTree(nn.Module):
             else:
                 det += [x_odd_update]  ##############################################################################
             del input[0]
-            rs += [r]
+
             self.count_levels = self.count_levels + 1
 
         for aprox in input:
@@ -366,9 +427,10 @@ class EncoderTree(nn.Module):
         x = x_reorder.permute(0, 2, 1)
         # x = x.permute(0, 2, 1)
         if self.norm is not None:
-            x = self.norm(x)  #torch.Size([16, 512, 336])
+            x = self.norm(x)  # torch.Size([16, 512, 336])
 
         return x
+
 
 class Chomp1d(nn.Module):
     def __init__(self, chomp_size):
@@ -379,86 +441,82 @@ class Chomp1d(nn.Module):
         return x[:, :, :-self.chomp_size].contiguous()
 
 
-class WASN(nn.Module):
-    def __init__(self, args, num_classes, num_stacks = 3 , first_conv=9,
+class IDCNet(nn.Module):
+    def __init__(self, args, num_classes, input_len, input_dim=9,
                  number_levels=4, number_level_part=[[1, 0], [1, 0], [1, 0]],
-                 no_bootleneck=True):
-        super(WASN, self).__init__()
+                 concat_len = None, no_bootleneck=True):
+        super(IDCNet, self).__init__()
 
-
-
-
+        # self.attention = Attention(input_dim, args.hidden_size * input_dim, dropout_rate= 0.5)
+        encoders = [Attention(input_dim, args.hidden_size * input_dim, dropout_rate= 0.5)
+                    for _ in range(3)]
+        self.attention = nn.ModuleList(encoders)
         # First convolution
 
+        self.first_conv = True
+        self.conv_first = nn.Sequential(
+            weight_norm(nn.Conv1d(input_dim, 512,
+                                  kernel_size=2, stride=1, padding=1, bias=False)),
+            # nn.BatchNorm1d(extend_channel),
+            Chomp1d(1),
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            nn.Dropout(0.5),
+            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+            #           kernel_size=2, stride=1, padding=1, bias=False)),
+            #
+            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            # nn.Dropout(0.5),
+        )
+        self.conv_Second = nn.Sequential(
+            weight_norm(nn.Conv1d(input_dim, int(args.hidden_size * input_dim),
+                                  kernel_size=2, stride=1, padding=1, bias=False)),
+            # nn.BatchNorm1d(extend_channel),
+            Chomp1d(1),
+            nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            nn.Dropout(0.5),
+            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+            #           kernel_size=2, stride=1, padding=1, bias=False)),
+            #
+            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+            # nn.Dropout(0.5),
+        )
 
-        # self.first_conv = True
-        # self.conv_first = nn.Sequential(
-        #     weight_norm(nn.Conv1d(first_conv, int(args.hidden_size * first_conv),
-        #               kernel_size=2, stride=1, padding=1, bias=False)),
-        #     # nn.BatchNorm1d(extend_channel),
-        #     Chomp1d(1),
-        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     nn.Dropout(0.5),
-        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     #
-        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     # nn.Dropout(0.5),
-        # )
-        # self.conv_Second = nn.Sequential(
-        #     weight_norm(nn.Conv1d(first_conv, int(args.hidden_size * first_conv),
-        #                           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     # nn.BatchNorm1d(extend_channel),
-        #     Chomp1d(1),
-        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     nn.Dropout(0.5),
-        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
-        #     #
-        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-        #     # nn.Dropout(0.5),
-        # )
-
-
-
-        in_planes = first_conv
-        out_planes = first_conv * (number_levels + 1)
+        in_planes = input_dim
+        out_planes = input_dim * (number_levels + 1)
         self.pe = args.positionalEcoding
 
         self.blocks1 = EncoderTree(
             [
-            LevelWASN(args = args, in_planes=in_planes,
-                      lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
-                      share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
-
-            for l in range(number_levels)
-            ],
-
-
-            level_parts = number_level_part,
-            Encoder = True
-        )
-
-        self.blocks2 = EncoderTree(
-            [
-                LevelWASN(args=args, in_planes=in_planes,
+                LevelIDCN(args=args, in_planes=in_planes,
                           lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
                           share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
 
                 for l in range(number_levels)
             ],
 
-
-            level_parts= number_level_part,
-             Encoder = False
+            level_parts=number_level_part,
+            Encoder=True
         )
+
+        self.blocks2 = EncoderTree(
+            [
+                LevelIDCN(args=args, in_planes=in_planes,
+                          lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
+                          share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
+
+                for l in range(number_levels)
+            ],
+
+            level_parts=number_level_part,
+            Encoder=False
+        )
+
+        self.concat_len = concat_len
 
         if no_bootleneck:
             in_planes *= 1
 
         self.num_planes = out_planes
-
-
 
         for m in self.modules():
             if isinstance(m, nn.Conv2d):
@@ -469,22 +527,26 @@ class WASN(nn.Module):
                 m.bias.data.zero_()
             elif isinstance(m, nn.Linear):
                 # nn.init.xavier_uniform_(m.weight.data)
-                # if m.bias is not None:
-                m.bias.data.zero_()
+                if m.bias is not None:
+                    m.bias.data.zero_()
 
-
-        self.projection1 = nn.Conv1d(args.window_size, num_classes,
+        self.projection1 = nn.Conv1d(input_len, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        self.projection2 = nn.Conv1d(args.window_size+num_classes, num_classes,
+        if self.concat_len:
+            self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
+                                     kernel_size=1, stride=1, bias=False)
+        else:
+            self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
+                                         kernel_size=1, stride=1, bias=False)
+
+        self.projection3 = nn.Conv1d(input_len + num_classes, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-
-        
-        self.hidden_size = in_planes 
+        self.hidden_size = in_planes
         # For positional encoding
-        if self.hidden_size%2 == 1:
-           self.hidden_size += 1
+        if self.hidden_size % 2 == 1:
+            self.hidden_size += 1
 
         num_timescales = self.hidden_size // 2  # 词维度除以2,因为词维度一半要求sin,一半要求cos
         max_timescale = 10000.0
@@ -499,50 +561,38 @@ class WASN(nn.Module):
             torch.arange(num_timescales, dtype=torch.float32) *
             -log_timescale_increment)  # 将log(max/min)均分num_timescales份数(词维度一半)
         self.register_buffer('inv_timescales', inv_timescales)
+
     def get_position_encoding(self, x):
         max_length = x.size()[1]
         position = torch.arange(max_length, dtype=torch.float32,
-                                device=x.device) #tensor([0., 1., 2., 3., 4.], device='cuda:0')
-        temp1 = position.unsqueeze(1) #5 1
-        temp2 = self.inv_timescales.unsqueeze(0) #1 256
-        scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0) #5 256
+                                device=x.device)  # tensor([0., 1., 2., 3., 4.], device='cuda:0')
+        temp1 = position.unsqueeze(1)  # 5 1
+        temp2 = self.inv_timescales.unsqueeze(0)  # 1 256
+        scaled_time = position.unsqueeze(1) * self.inv_timescales.unsqueeze(0)  # 5 256
         signal = torch.cat([torch.sin(scaled_time), torch.cos(scaled_time)],
-                           dim=1) #5 512 [T, C]
+                           dim=1)  # 5 512 [T, C]
         signal = F.pad(signal, (0, 0, 0, self.hidden_size % 2))
         signal = signal.view(1, max_length, self.hidden_size)
-
-
 
         # signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
         # if self.hidden_size % 2==1:
         #     signal = signal[:,1:]
         # signal = signal.view(1, max_length, self.hidden_size)
-       
-        return signal
 
-    def creatMask(self, x):
-        b, l, c = x.shape
-        mask_ratio = nn.Dropout(p=0.8)
-        Mask = torch.ones(b, l, c, device=x.device)
-        Mask = mask_ratio(Mask)
-        Mask = Mask > 0  # torch.Size([8, 1, 48, 48])
-        Mask = Mask
-        x.masked_fill(Mask, 0)
-        return x
+        return signal
 
     def forward(self, x):
         if self.pe:
             pe = self.get_position_encoding(x)
-            if pe.shape[2]>x.shape[2]:
-                x += pe[:,:,:-1]
+            if pe.shape[2] > x.shape[2]:
+                x += pe[:, :, :-1]
             else:
                 x += self.get_position_encoding(x)
         # res1 = x
         # if self.first_conv:
-        #     x = x.permute(0,2,1)
+        #     x = x.permute(0, 2, 1)
         #     x = self.conv_first(x)
         #     x = x.permute(0, 2, 1)
-        # x = self.creatMask(x)
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)
@@ -552,7 +602,10 @@ class WASN(nn.Module):
         x = self.projection1(x)
         MidOutPut = x
 
-        x = torch.cat((res1, x), dim=1)
+        if self.concat_len:
+            x = torch.cat((res1[:, -self.concat_len:,:], x), dim=1)
+        else:
+            x = torch.cat((res1, x), dim=1)
         # res2 = x
 
         # if self.first_conv:
@@ -565,21 +618,21 @@ class WASN(nn.Module):
         x = self.blocks2(x, attn_mask=None)
         x += res2
         x = self.projection2(x)
+
+        encoder_output = res1
+        for attn_layer in self.attention:
+            encoder_output = attn_layer(encoder_output, mask = None)
+
+
+        x = torch.cat((x, encoder_output), dim=1)
+        x = self.projection3(x)
+
         return x, MidOutPut
-
-
-
-
-
-
-
 
 
 def get_variable(x):
     x = Variable(x)
     return x.cuda() if torch.cuda.is_available() else x
-
-
 
 
 if __name__ == '__main__':
@@ -622,9 +675,9 @@ if __name__ == '__main__':
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = WASN(args, num_classes=12, first_conv=307,
+    model = IDCNet(args, num_classes=12, input_len= 12, input_dim=8,
                  number_levels=len(part),
-                 number_level_part=part).cuda()
-    x = torch.randn(32, 12, 307).cuda()
-    y,res = model(x)
+                 number_level_part=part, concat_len = None).cuda()
+    x = torch.randn(32, 12, 8).cuda()
+    y, res = model(x)
     print(y.shape)

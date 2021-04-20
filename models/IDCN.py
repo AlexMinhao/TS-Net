@@ -123,8 +123,12 @@ class Interactor(nn.Module):
         if self.modified:
             x_even = x_even.permute(0, 2, 1)
             x_odd = x_odd.permute(0, 2, 1)
-            x_odd_update = x_odd.mul(torch.exp(self.phi(x_even))) - self.P(x_even)
-            x_even_update = x_even.mul(torch.exp(self.psi(x_odd_update))) + self.U(x_odd_update)
+            # x_odd_update = x_odd.mul(torch.exp(self.phi(x_even))) - self.P(x_even)
+            # x_even_update = x_even.mul(torch.exp(self.psi(x_odd_update))) + self.U(x_odd_update)
+            d = x_odd.mul(torch.exp(self.phi(x_even)))
+            c = x_even.mul(torch.exp(self.psi(x_odd)))
+            x_even_update = c + self.U(d)
+            x_odd_update = d - self.P(c)
 
             return (x_even_update, x_odd_update)
 
@@ -211,7 +215,7 @@ class EncoderTree(nn.Module):
         self.norm = norm_layer
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
         self.level_part = level_parts  # [[0, 1], [0, 0]]
-
+        self.layers = 3 if len(level_parts) == 7 else 2
         self.count_levels = 0
         self.ecoder = Encoder
 
@@ -229,21 +233,23 @@ class EncoderTree(nn.Module):
 
         remain = [i % 2 for i in n_1]
 
-
         n_2 = []
-        index = list(range(int(N / 4), 0, -1))
-        for i in range(N):
-            if remain[i] > 0:
-                r = int(((n_1[i] + 1) / 2) % (N / 4))
-                if r == 0:
-                    r = int(N / 4)
+        rem4 = [i % 4 for i in n]
 
-                n_2.append(int(n_1[i] + index[r - 1]))
+        for i in range(N):
+            if rem4[i] == 0:
+                n_2.append(int(n[i] / 4))
+
+            elif rem4[i] == 1:
+
+                n_2.append(int((3 * N + 3) / 4 + n[i] / 4))
+            elif rem4[i] == 2:
+                n_2.append(int((1 * N + 2) / 4 + n[i] / 4))
+            elif rem4[i] == 3:
+                n_2.append(int((2 * N + 1) / 4 + n[i] / 4))
             else:
-                r = int((n_1[i] / 2) % (N / 4))
-                if r == 0:
-                    r = int(N / 4)
-                n_2.append(int(n_1[i] - r))
+                print("Error!")
+
         n_3 = []
         rem8 = [i % 8 for i in n]
         for i in range(N):
@@ -303,7 +309,7 @@ class EncoderTree(nn.Module):
         # We add them inside the all GAP detail coefficients
 
         x = torch.cat(det, 2)  # torch.Size([32, 307, 12])
-        index = self.reOrder(x.shape[2], layer=2)
+        index = self.reOrder(x.shape[2], layer=self.layers)
         x_reorder = [x[:, :, i].unsqueeze(2) for i in index]
 
         x_reorder = torch.cat(x_reorder, 2)
@@ -333,33 +339,33 @@ class IDCNet(nn.Module):
 
         # First convolution
 
-        self.first_conv = True
-        self.conv_first = nn.Sequential(
-            weight_norm(nn.Conv1d(input_dim, int(args.hidden_size * input_dim),
-                                  kernel_size=2, stride=1, padding=1, bias=False)),
-            # nn.BatchNorm1d(extend_channel),
-            Chomp1d(1),
-            nn.LeakyReLU(negative_slope=0.01, inplace=True),
-            nn.Dropout(0.5),
-            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-            #           kernel_size=2, stride=1, padding=1, bias=False)),
-            #
-            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-            # nn.Dropout(0.5),
-        )
-        self.conv_Second = nn.Sequential(
-            weight_norm(nn.Conv1d(input_dim, int(args.hidden_size * input_dim),
-                                  kernel_size=2, stride=1, padding=1, bias=False)),
-            # nn.BatchNorm1d(extend_channel),
-            Chomp1d(1),
-            nn.LeakyReLU(negative_slope=0.01, inplace=True),
-            nn.Dropout(0.5),
-            # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
-            #           kernel_size=2, stride=1, padding=1, bias=False)),
-            #
-            # nn.LeakyReLU(negative_slope=0.01, inplace=True),
-            # nn.Dropout(0.5),
-        )
+        # self.first_conv = True
+        # self.conv_first = nn.Sequential(
+        #     weight_norm(nn.Conv1d(input_dim, int(args.hidden_size * input_dim),
+        #                           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     # nn.BatchNorm1d(extend_channel),
+        #     Chomp1d(1),
+        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     nn.Dropout(0.5),
+        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     #
+        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     # nn.Dropout(0.5),
+        # )
+        # self.conv_Second = nn.Sequential(
+        #     weight_norm(nn.Conv1d(input_dim, int(args.hidden_size * input_dim),
+        #                           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     # nn.BatchNorm1d(extend_channel),
+        #     Chomp1d(1),
+        #     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     nn.Dropout(0.5),
+        #     # weight_norm(nn.Conv1d(args.hidden_size * first_conv, first_conv,
+        #     #           kernel_size=2, stride=1, padding=1, bias=False)),
+        #     #
+        #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
+        #     # nn.Dropout(0.5),
+        # )
 
         in_planes = input_dim
         out_planes = input_dim * (number_levels + 1)
@@ -451,10 +457,7 @@ class IDCNet(nn.Module):
         signal = F.pad(signal, (0, 0, 0, self.hidden_size % 2))
         signal = signal.view(1, max_length, self.hidden_size)
 
-        # signal = F.pad(signal, (1, self.hidden_size % 2), "constant", 0)
-        # if self.hidden_size % 2==1:
-        #     signal = signal[:,1:]
-        # signal = signal.view(1, max_length, self.hidden_size)
+
 
         return signal
 
@@ -465,11 +468,7 @@ class IDCNet(nn.Module):
                 x += pe[:, :, :-1]
             else:
                 x += self.get_position_encoding(x)
-        # res1 = x
-        # if self.first_conv:
-        #     x = x.permute(0, 2, 1)
-        #     x = self.conv_first(x)
-        #     x = x.permute(0, 2, 1)
+
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)
@@ -481,14 +480,9 @@ class IDCNet(nn.Module):
 
         if self.concat_len:
             x = torch.cat((res1[:, -self.concat_len:,:], x), dim=1)
+
         else:
             x = torch.cat((res1, x), dim=1)
-        # res2 = x
-
-        # if self.first_conv:
-        #     x = x.permute(0,2,1)
-        #     x = self.conv_Second(x)
-        #     x = x.permute(0, 2, 1)
 
         res2 = x
 
@@ -538,14 +532,14 @@ if __name__ == '__main__':
     parser.add_argument('--positionalEcoding', type=bool, default=True)
 
     args = parser.parse_args()
-    # part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    part = [[1, 1], [0, 0], [0, 0]]
+    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
+    # part = [[1, 1], [0, 0], [0, 0]]
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = IDCNet(args, num_classes=12, input_len= 12, input_dim=8,
+    model = IDCNet(args, num_classes=12, input_len= 16, input_dim=8,
                  number_levels=len(part),
-                 number_level_part=part, concat_len = None).cuda()
-    x = torch.randn(32, 12, 8).cuda()
-    y, res = model(x)
+                 number_level_part=part, concat_len = 4).cuda()
+    x = torch.randn(32, 16, 8).cuda()
+    y,res = model(x)
     print(y.shape)

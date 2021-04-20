@@ -1,30 +1,16 @@
 import argparse
-import math
 import time
-
-import torch
 import torch.nn as nn
-
-import numpy as np
-import importlib
-
 from util_financial import *
-
 # from StackTWNet import WASN
 # from models.StackTWaveNetTransformerEncoder import WASN
 # from models.OriginalStackTWaveNetTransformerEncoder import WASN
 from models.IDCN import IDCNet
-
-
 from tensorboardX import SummaryWriter
-import torch.optim as optim
 import math
 
-import util_financial
-
-
 parser = argparse.ArgumentParser(description='PyTorch Time series forecasting')
-parser.add_argument('--data', type=str, default='./dataset/electricity.txt',
+parser.add_argument('--data', type=str, default='./dataset/solar_AL.txt',
                     help='location of the data file')
 parser.add_argument('--log_interval', type=int, default=2000, metavar='N',
                     help='report interval')
@@ -32,52 +18,42 @@ parser.add_argument('--save', type=str, default='model/model.pt',
                     help='path to save the final model')
 parser.add_argument('--optim', type=str, default='adam')
 parser.add_argument('--L1Loss', type=bool, default=True)
-parser.add_argument('--normalize', type=int, default=2)
+parser.add_argument('--normalize', type=int, default=0)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
-parser.add_argument('--num_nodes',type=int,default=321,help='number of nodes/variables')
+parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
 
-
-# parser.add_argument('--seq_in_len',type=int,default= 64,help='input sequence length') #24*7
-
-
-parser.add_argument('--batch_size',type=int,default=32,help='batch size')
-parser.add_argument('--lr',type=float,default=0.0003,help='learning rate')
+parser.add_argument('--batch_size',type=int,default=8,help='batch size')
+parser.add_argument('--lr',type=float,default=5e-3,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
-
-
-parser.add_argument('--epochs',type=int,default=100,help='')
-
-
-parser.add_argument('--hidden-size', default=1, type=float, help='hidden channel of module')
+parser.add_argument('--epochs',type=int,default=70,help='')
+parser.add_argument('--hidden-size', default=0.5, type=float, help='hidden channel of module')
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
-parser.add_argument('--kernel', default=3, type=int, help='kernel size')
+parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
+parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
+parser.add_argument('--model_name', type=str, default='EncoDeco')
+parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 parser.add_argument('--window_size', type=int, default=24) # input size
-parser.add_argument('--horizon', type=int, default=24)  # predication
-
-parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
-
-parser.add_argument('--model_name', type=str, default='exc')
-
-parser.add_argument('--positionalEcoding', type = bool , default=False)
+parser.add_argument('--horizon', type=int, default=3)  # predication
+parser.add_argument('--num_concat', type=int, default=21)
 
 args = parser.parse_args()
 device = torch.device(args.device)
 torch.set_num_threads(3)
 print(args)
 
-if args.data == 'dataset/electricity.txt':
+if args.data == './dataset/electricity.txt':
     args.num_nodes = 321
 
-if args.data == 'dataset/solar_AL.txt':
+if args.data == './dataset/solar_AL.txt':
     args.num_nodes = 137
 
-if args.data == 'dataset/exchange_rate.txt':
+if args.data == './dataset/exchange_rate.txt':
     args.num_nodes = 8
 
-if args.data == 'dataset/traffic.txt':
+if args.data == './dataset/traffic.txt':
     args.num_nodes = 862
 
 print('dataset {}, the channel size is {}'.format(args.data, args.num_nodes))
@@ -96,15 +72,13 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
     final_loss = 0
     min_loss = 0
 
-
     for X, Y in data.get_batches(X, Y, batch_size, True):
         model.zero_grad()             #torch.Size([32, 168, 137])
 
 
-        tx = X#[:, id, :] #torch.Size([32, 1, 137, 168])
-        ty = Y#[:, id]       #torch.Size([32, 137])
-        # output = model(tx,id) #torch.Size([32, 1, 137, 1])
-        # output = model(tx)  # torch.Size([32, 1, 137, 1])
+        tx = X
+        ty = Y
+
         forecast, res = model(tx)
         forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
@@ -220,9 +194,9 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
         corr = (corr[ind]).mean()
         corr_final_each.append(corr)
 
-    print('Valid_Each_final Rse:', rse_final_each)
-    print('Valid_Each_final Rae:', rae_final_each)
-    print('Valid_Each_final Corr:', corr_final_each)
+    # print('Valid_Each_final Rse:', rse_final_each)
+    # print('Valid_Each_final Rae:', rae_final_each)
+    # print('Valid_Each_final Corr:', corr_final_each)
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -356,9 +330,9 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
         corr = (corr[ind]).mean()
         corr_final_each.append(corr)
 
-    print('TEST_Each_final Rse:', rse_final_each)
-    print('TEST_Each_final Rae:', rae_final_each)
-    print('TEST_Each_final Corr:', corr_final_each)
+    # print('TEST_Each_final Rse:', rse_final_each)
+    # print('TEST_Each_final Rae:', rae_final_each)
+    # print('TEST_Each_final Corr:', corr_final_each)
 
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
@@ -588,6 +562,302 @@ def train(epoch, data, X, Y, model, criterion, optim, batch_size):
     return total_loss / n_samples
 
 
+def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
+    model.train()
+    total_loss = 0
+    n_samples = 0
+    iter = 0
+    final_loss = 0
+    min_loss = 0
+
+
+    for X, Y in data.get_batches(X, Y, batch_size, True):
+        model.zero_grad()             #torch.Size([32, 168, 137])
+
+
+        tx = X#[:, id, :] #torch.Size([32, 1, 137, 168])
+        ty = Y#[:, id]       #torch.Size([32, 137])
+        # output = model(tx,id) #torch.Size([32, 1, 137, 1])
+        # output = model(tx)  # torch.Size([32, 1, 137, 1])
+        forecast = model(tx)
+        forecast = torch.squeeze(forecast)
+        scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
+
+        loss = criterion(forecast * scale, ty * scale)
+        loss.backward()
+        total_loss += loss.item()
+        loss_f =  criterion(forecast * scale, ty * scale)
+
+        final_loss  += loss_f.item()
+
+        n_samples += (forecast.size(0) * data.m)
+        grad_norm = optim.step()
+
+        if iter%100==0:
+            print('iter:{:3d} | loss: {:.7f}, loss_final: {:.7f}'.format(iter,loss.item()/(forecast.size(0) * data.m),
+                                                                                           loss_f.item()/(forecast.size(0) * data.m)))
+        iter += 1
+
+    writer.add_scalar('Train_loss_tatal', total_loss / n_samples, global_step=epoch)
+    writer.add_scalar('Train_loss_Final', final_loss / n_samples, global_step=epoch)
+    print(
+        '| Epoch | train_loss {:5.7f} | final_loss {:5.7f} | mid_loss {:5.7f} '.format(
+            total_loss / n_samples, final_loss / n_samples, min_loss / n_samples), flush=True)
+    return total_loss / n_samples
+
+
+
+def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,writer):
+    model.eval()
+    total_loss = 0
+    total_loss_l1 = 0
+
+    total_loss_mid = 0
+    total_loss_l1_mid = 0
+    n_samples = 0
+    predict = None
+    res_mid = None
+    test = None
+
+    forecast_set = []
+    Mid_set = []
+    target_set = []
+
+    for X, Y in data.get_batches(X, Y, batch_size*200, False):
+        # print('0')
+        # X = torch.unsqueeze(X,dim=1)
+        # X = X.transpose(2,3)
+        with torch.no_grad():
+            forecast = model(X) #torch.Size([32, 3, 137])
+        # forecast = torch.squeeze(forecast)
+        # res = torch.squeeze(res)
+        true = Y[:, -1, :].squeeze()
+
+
+        forecast_set.append(forecast)
+
+        target_set.append(Y)
+
+        if len(forecast.shape)==1:
+            forecast = forecast.unsqueeze(dim=0)
+
+        if predict is None:
+            predict = forecast[:,-1,:].squeeze()
+
+            test = Y[:,-1,:].squeeze() #torch.Size([32, 3, 137])
+
+        else:
+            predict = torch.cat((predict, forecast[:,-1,:].squeeze()))
+
+            test = torch.cat((test, Y[:, -1, :].squeeze()))
+        output = forecast[:,-1,:].squeeze()
+
+        scale = data.scale.expand(output.size(0),data.m)
+
+
+        total_loss += evaluateL2(output * scale, true * scale).item()
+        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
+
+
+        n_samples += (output.size(0) * data.m)
+
+    forecast_Norm = torch.cat(forecast_set, axis=0)
+    target_Norm = torch.cat(target_set, axis=0)
+
+
+
+    rse_final_each = []
+    rae_final_each = []
+    corr_final_each = []
+    Scale = data.scale.expand(forecast_Norm.size(0),data.m)
+    for i in range(forecast_Norm.shape[1]):
+        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
+        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
+
+        rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0]/ data.m) / data.rse
+        rae_F = (lossL1_F / forecast_Norm.shape[0]/ data.m) / data.rae
+        rse_final_each.append(rse_F.item())
+        rae_final_each.append(rae_F.item())
+
+        pred = forecast_Norm[:,i,:].data.cpu().numpy()
+        y_true = target_Norm[:,i,:].data.cpu().numpy()
+
+        sig_p = (pred).std(axis=0)
+        sig_g = (y_true).std(axis=0)
+        m_p = pred.mean(axis=0)
+        m_g = y_true.mean(axis=0)
+        ind = (sig_g != 0)
+        corr = ((pred - m_p) * (y_true - m_g)).mean(axis=0) / (sig_p * sig_g)
+        corr = (corr[ind]).mean()
+        corr_final_each.append(corr)
+
+    print('Valid_Each_final Rse:', rse_final_each)
+    print('Valid_Each_final Rae:', rae_final_each)
+    print('Valid_Each_final Corr:', corr_final_each)
+
+    rse = math.sqrt(total_loss / n_samples) / data.rse
+    rae = (total_loss_l1 / n_samples) / data.rae
+
+    predict = predict.data.cpu().numpy()
+    Ytest = test.data.cpu().numpy()
+
+    sigma_p = (predict).std(axis=0)
+    sigma_g = (Ytest).std(axis=0)
+    mean_p = predict.mean(axis=0)
+    mean_g = Ytest.mean(axis=0)
+    index = (sigma_g != 0)
+    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation = (correlation[index]).mean()
+###############################Middle#######################################################
+
+
+    writer.add_scalar('Validation_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Validation_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Validation_final_corr', correlation, global_step=epoch)
+
+
+
+    print(
+        '|valid_final rse {:5.4f} | valid_final rae {:5.4f} | valid_final corr  {:5.4f}'.format(
+            rse, rae, correlation), flush=True)
+
+
+    # if epoch%4==0:
+    #     save_model(model, result_file,epoch=epoch)
+    return rse, rae, correlation
+
+
+
+def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, writer):
+    model.eval()
+    total_loss = 0
+    total_loss_l1 = 0
+
+    total_loss_mid = 0
+    total_loss_l1_mid = 0
+    n_samples = 0
+    predict = None
+    res_mid = None
+    test = None
+
+    forecast_set = []
+    Mid_set = []
+    target_set = []
+
+    for X, Y in data.get_batches(X, Y, batch_size*10, False):
+        # print('0')
+        # X = torch.unsqueeze(X,dim=1)
+        # X = X.transpose(2,3)
+        with torch.no_grad():
+            forecast = model(X) #torch.Size([32, 3, 137])
+        # forecast = torch.squeeze(forecast)
+        # res = torch.squeeze(res)
+        true = Y[:, -1, :].squeeze()
+
+        forecast_set.append(forecast)
+
+        target_set.append(Y)
+
+        if len(forecast.shape)==1:
+            forecast = forecast.unsqueeze(dim=0)
+
+        if predict is None:
+            predict = forecast[:, -1, :].squeeze()
+
+            test = Y[:, -1, :].squeeze()  # torch.Size([32, 3, 137])
+
+        else:
+            predict = torch.cat((predict, forecast[:, -1, :].squeeze()))
+
+            test = torch.cat((test, Y[:, -1, :].squeeze()))
+        output = forecast[:, -1, :].squeeze()
+
+        scale = data.scale.expand(output.size(0), data.m)
+
+        total_loss += evaluateL2(output * scale, true * scale).item()
+        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
+
+
+        n_samples += (output.size(0) * data.m)
+
+    forecast_Norm = torch.cat(forecast_set, axis=0)
+    target_Norm = torch.cat(target_set, axis=0)
+
+
+    rse_final_each = []
+    rae_final_each = []
+    corr_final_each = []
+    Scale = data.scale.expand(forecast_Norm.size(0), data.m)
+    for i in range(forecast_Norm.shape[1]):
+        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+
+        rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0] / data.m) / data.rse
+        rae_F = (lossL1_F / forecast_Norm.shape[0] / data.m) / data.rae
+        rse_final_each.append(rse_F.item())
+        rae_final_each.append(rae_F.item())
+
+        pred = forecast_Norm[:, i, :].data.cpu().numpy()
+        y_true = target_Norm[:, i, :].data.cpu().numpy()
+
+        sig_p = (pred).std(axis=0)
+        sig_g = (y_true).std(axis=0)
+        m_p = pred.mean(axis=0)
+        m_g = y_true.mean(axis=0)
+        ind = (sig_g != 0)
+        corr = ((pred - m_p) * (y_true - m_g)).mean(axis=0) / (sig_p * sig_g)
+        corr = (corr[ind]).mean()
+        corr_final_each.append(corr)
+
+    print('TEST_Each_final Rse:', rse_final_each)
+    print('TEST_Each_final Rae:', rae_final_each)
+    print('TEST_Each_final Corr:', corr_final_each)
+
+
+    rse = math.sqrt(total_loss / n_samples) / data.rse
+    rae = (total_loss_l1 / n_samples) / data.rae
+
+    predict = predict.data.cpu().numpy()
+    Ytest = test.data.cpu().numpy()
+
+    sigma_p = (predict).std(axis=0)
+    sigma_g = (Ytest).std(axis=0)
+    mean_p = predict.mean(axis=0)
+    mean_g = Ytest.mean(axis=0)
+    index = (sigma_g != 0)
+    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation = (correlation[index]).mean()
+    ###############################Middle#######################################################
+
+
+    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
+
+#===================
+
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
+
+    sigma_p = (predict).std(axis=0)
+    sigma_g = (Ytest).std(axis=0)
+    mean_p = predict.mean(axis=0)
+    mean_g = Ytest.mean(axis=0)
+    index = (sigma_g != 0)
+    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation = (correlation[index]).mean()
+
+    print(
+        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(
+            rse, rae, correlation), flush=True)
+
+
+    # if epoch%4==0:
+    #     save_model(model, result_file,epoch=epoch)
+    return rse, rae, correlation
+
+
+
 
 
 def main_run():
@@ -597,9 +867,9 @@ def main_run():
 
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
     # part = [[1, 1], [0, 0], [0, 0]]  # Best model
-    model = IDCNet(args, num_classes = args.horizon, input_dim = args.num_nodes,
+    model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
                  number_levels=len(part),
-                 number_level_part=part).cuda()
+                 number_level_part=part, concat_len= args.num_concat)
     model = model.to(device)
 
 
@@ -636,30 +906,56 @@ def main_run():
             for epoch in range(1, args.epochs + 1):
                 epoch_start_time = time.time()
                 adjust_learning_rate(optim, epoch, args)
-                train_loss = trainEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim, args.batch_size)
-                val_loss, val_rae, val_corr = evaluateEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
-                                                   args.batch_size, writer)
-                test_loss, test_rae, test_corr = testEecoDeco(epoch, Data, Data.test[0], Data.test[1], model, evaluateL2,
-                                                               evaluateL1,
-                                                               args.batch_size, writer)
+                if args.model_name =="Enco":
+                    train_loss = trainEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
+                                               args.batch_size)
+                    val_loss, val_rae, val_corr = evaluateEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
+                                                                   evaluateL2, evaluateL1,
+                                                                   args.batch_size, writer)
+                    test_loss, test_rae, test_corr = testEeco(epoch, Data, Data.test[0], Data.test[1], model,
+                                                                  evaluateL2,
+                                                                  evaluateL1,
+                                                                  args.batch_size, writer)
 
-
-                print(
-                    '| end of epoch {:3d} | time: {:5.2f}s | train_loss {:5.4f} | valid rse {:5.4f} | valid rae {:5.4f} | valid corr  {:5.4f}|'
-                    ' test rse {:5.4f} | test rae {:5.4f} | test corr  {:5.4f}'.format(
-                        epoch, (time.time() - epoch_start_time), train_loss, val_loss, val_rae, val_corr, test_loss, test_rae, test_corr), flush=True)
-                # Save the model if the validation loss is the best we've seen so far.
-
-                if val_loss < best_val:
-                    # with open(args.save, 'wb') as f:
-                    #     torch.save(model, f)
-                    best_val = val_loss
                     print(
-                        '--------------| Best Val loss |--------------')
-                # if epoch % 5 == 0:
-                #     test_acc, test_rae, test_corr = evaluate(Data, Data.test[0], Data.test[1], model, evaluateL2, evaluateL1,
-                #                                          args.batch_size)
-                #     print("test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_acc, test_rae, test_corr), flush=True)
+                        '| EncoOnly: end of epoch {:3d} | time: {:5.2f}s | train_loss {:5.4f} | valid rse {:5.4f} | valid rae {:5.4f} | valid corr  {:5.4f}|'
+                        ' test rse {:5.4f} | test rae {:5.4f} | test corr  {:5.4f}'.format(
+                            epoch, (time.time() - epoch_start_time), train_loss, val_loss, val_rae, val_corr, test_loss,
+                            test_rae, test_corr), flush=True)
+                    # Save the model if the validation loss is the best we've seen so far.
+
+                    if val_loss < best_val:
+                        # with open(args.save, 'wb') as f:
+                        #     torch.save(model, f)
+                        best_val = val_loss
+                        print(
+                            '--------------| Best Val loss |--------------')
+
+                else:
+                    train_loss = trainEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim, args.batch_size)
+                    val_loss, val_rae, val_corr = evaluateEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
+                                                       args.batch_size, writer)
+                    test_loss, test_rae, test_corr = testEecoDeco(epoch, Data, Data.test[0], Data.test[1], model, evaluateL2,
+                                                                   evaluateL1,
+                                                                   args.batch_size, writer)
+
+
+                    print(
+                        '| EncoDeco: end of epoch {:3d} | time: {:5.2f}s | train_loss {:5.4f} | valid rse {:5.4f} | valid rae {:5.4f} | valid corr  {:5.4f}|'
+                        ' test rse {:5.4f} | test rae {:5.4f} | test corr  {:5.4f}'.format(
+                            epoch, (time.time() - epoch_start_time), train_loss, val_loss, val_rae, val_corr, test_loss, test_rae, test_corr), flush=True)
+                    # Save the model if the validation loss is the best we've seen so far.
+
+                    if val_loss < best_val:
+                        # with open(args.save, 'wb') as f:
+                        #     torch.save(model, f)
+                        best_val = val_loss
+                        print(
+                            '--------------| Best Val loss |--------------')
+                    # if epoch % 5 == 0:
+                    #     test_acc, test_rae, test_corr = evaluate(Data, Data.test[0], Data.test[1], model, evaluateL2, evaluateL1,
+                    #                                          args.batch_size)
+                    #     print("test rse {:5.4f} | test rae {:5.4f} | test corr {:5.4f}".format(test_acc, test_rae, test_corr), flush=True)
 
         except KeyboardInterrupt:
             print('-' * 89)

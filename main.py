@@ -2,7 +2,7 @@ import os
 import torch
 #os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from datetime import datetime
-from models.handler import train, trainSemi, trainEco2Deco, test, trainOverLap, retrain
+from models.handler import train, trainSemi, trainEco2Deco, test, trainOverLap, trainBaseline, retrain
 import argparse
 import pandas as pd
 import numpy as np
@@ -43,6 +43,33 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--positionalEcoding', type = bool , default=True)
+parser.add_argument('--num_concat', type=int, default=21)
+
+
+#LSTnet
+parser.add_argument('--output_fun', type=str, default='tanh')
+parser.add_argument('--hidCNN', type=int, default=128,  # 32 64 128
+                    help='number of CNN hidden units')
+parser.add_argument('--hidRNN', type=int, default=256,  # 64 128 256
+                    help='number of RNN hidden units')
+parser.add_argument('--CNN_kernel', type=int, default=3,
+                    help='the kernel size of the CNN layers')
+parser.add_argument('--highway_window', type=int, default=6,
+                    help='The window size of the highway component')
+parser.add_argument('--dropout', type=float, default=0.2,
+                    help='dropout applied to layers (0 = no dropout)')
+parser.add_argument('--skip', type=float, default=2)
+parser.add_argument('--hidSkip', type=int, default=5)
+#TCN
+parser.add_argument('--levels', type=int, default=3,
+                    help='# of levels (default: 8)')
+parser.add_argument('--nhid', type=int, default=64,
+                    help='number of hidden units per layer (default: 30)')
+
+#Transformer
+parser.add_argument('--n_layers', type=int, default=4)
+parser.add_argument('--filter_size', type=int, default=256)
+parser.add_argument('--head_size', type=int, default=8)
 
 args = parser.parse_args()
 print(f'Training configs: {args}')
@@ -74,7 +101,7 @@ if __name__ == '__main__':
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True  # Can change it to False --> default: False
     torch.backends.cudnn.enabled = True
-    writer = SummaryWriter('./run/{}_FirstConv_ReorderAlg'.format(args.model_name))
+    writer = SummaryWriter('./run/{}_Atten_cat'.format(args.model_name))
     if args.train:
         try:
             before_train = datetime.now().timestamp()
@@ -96,9 +123,16 @@ if __name__ == '__main__':
                 after_train = datetime.now().timestamp()
                 print(f'Training took {(after_train - before_train) / 60} minutes')
                 print("===================OverLap-End=========================")
+            elif args.model_name == "Baseline":
+                print("===================Baseline-Start=========================")
+                _, normalize_statistic = trainBaseline(data, train_data, valid_data, test_data, args, result_train_file, writer)
+                after_train = datetime.now().timestamp()
+                print(f'Training took {(after_train - before_train) / 60} minutes')
+                print("===================Baseline-End=========================")
+
             else:
                 print("===================Normal-Start=========================")
-                _, normalize_statistic = train(train_data, valid_data, test_data, args, result_train_file, writer)
+                _, normalize_statistic = train(data, train_data, valid_data, test_data, args, result_train_file, writer)
                 after_train = datetime.now().timestamp()
                 print(f'Training took {(after_train - before_train) / 60} minutes')
                 print("===================Normal-End=========================")

@@ -427,6 +427,8 @@ class IDCNet(nn.Module):
             self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
                                          kernel_size=1, stride=1, bias=False)
 
+        self.projection3 = nn.Linear(input_len*input_dim, num_classes)
+
         self.hidden_size = in_planes
         # For positional encoding
         if self.hidden_size % 2 == 1:
@@ -493,9 +495,9 @@ class IDCNet(nn.Module):
 
         x = self.blocks1(x, attn_mask=None)
 
-        x += res1
+        # x += res1
 
-        x = self.projection1(x)
+        # x = self.projection1(x)
 
         # res2 = x
 
@@ -503,8 +505,8 @@ class IDCNet(nn.Module):
         #     x = x.permute(0,2,1)
         #     x = self.conv_Second(x)
         #     x = x.permute(0, 2, 1)
-
-
+        x = x.reshape(-1,40*96)
+        x = self.projection3(x)
         return x
 
 
@@ -515,27 +517,12 @@ def get_variable(x):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--train', type=bool, default=True)
-    parser.add_argument('--evaluate', type=bool, default=False)
-    parser.add_argument('--dataset', type=str, default='PeMS03_data')  # PeMS07
-    parser.add_argument('--window_size', type=int, default=12)
-    parser.add_argument('--horizon', type=int, default=12)
-    parser.add_argument('--train_length', type=float, default=7)
-    parser.add_argument('--valid_length', type=float, default=2)
-    parser.add_argument('--test_length', type=float, default=1)
-    parser.add_argument('--epoch', type=int, default=50)
-    parser.add_argument('--lr', type=float, default=3 * 1e-5)
-    parser.add_argument('--multi_layer', type=int, default=5)
-    parser.add_argument('--device', type=str, default='cuda:0')
-    parser.add_argument('--validate_freq', type=int, default=1)
-    parser.add_argument('--batch_size', type=int, default=32)
-    parser.add_argument('--norm_method', type=str, default='z_score')
-    parser.add_argument('--optimizer', type=str, default='RMSProp')
-    parser.add_argument('--early_stop', type=bool, default=False)
-    parser.add_argument('--exponential_decay_step', type=int, default=5)
-    parser.add_argument('--decay_rate', type=float, default=0.5)
+
+    parser.add_argument('--window_size', type=int, default=100)
+    parser.add_argument('--horizon', type=int, default=3)
+
     parser.add_argument('--dropout_rate', type=float, default=0.5)
-    parser.add_argument('--leakyrelu_rate', type=int, default=0.2)
+
 
     # Action Part
 
@@ -549,13 +536,13 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    part = [[1, 1], [0, 0], [0, 0]]
+    # part = [[1, 1], [0, 0], [0, 0]]
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = IDCNet(args, num_classes=args.horizon, input_len= args.window_size, input_dim=170,
+    model = IDCNet(args, num_classes=3, input_len= 96, input_dim=40,
                  number_levels=len(part),
                  number_level_part=part, concat_len = None).cuda()
-    x = torch.randn(32, 12, 170).cuda()
+    x = torch.randn(32, 96, 40).cuda()
     y = model(x)
     print(y.shape)

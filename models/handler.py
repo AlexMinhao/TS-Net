@@ -33,7 +33,7 @@ def save_model(model, model_dir, epoch=None):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08Reorder.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08NoLinear.pt')
     with open(file_name, 'wb') as f:
         torch.save(model, f)
 
@@ -42,7 +42,7 @@ def load_model(model_dir, epoch=None):
     if not model_dir:
         return
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08Reorder.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08NoLinear.pt')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     if not os.path.exists(file_name):
@@ -464,7 +464,7 @@ def train(data, train_data, valid_data, test_data, args, result_file, writer):
         # early stop
         if args.early_stop and validate_score_non_decrease_count >= args.early_stop_step:
             break
-    return performance_metrics, normalize_statistic
+    return performance_metrics, test_normalize_statistic
 
 
 def test(test_data, train_data, args, result_train_file, result_test_file, epoch):
@@ -1458,9 +1458,9 @@ def trainBaseline(total, train_data, valid_data, test_data, args, result_file, w
             # print("iter",i)
             inputs = inputs.to(args.device)  # torch.Size([32, 12, 228])
             target = target.to(args.device)  # torch.Size([32, 3, 228])
-            target = inputs
-            # mask = creatMask(inputs)
-            # input = inputs.masked_fill(mask, 0)
+            # target = inputs
+            mask = creatMask(inputs)
+            inputs = inputs.masked_fill(mask, 0)
             # inputs = inputs.permute(0, 2, 1)
             model.zero_grad()
 
@@ -1641,7 +1641,11 @@ def inferenceBaseline(model, dataloader, device, node_cnt, window_size, horizon)
         for i, (inputs, target) in enumerate(dataloader):
             inputs = inputs.to(device)
             target = target.to(device)
-            target = inputs
+
+            mask = creatMask(inputs)
+            inputs = inputs.masked_fill(mask, 0)
+
+            # target = inputs
             input_set.append(inputs.detach().cpu().numpy())
             target_set.append(target.detach().cpu().numpy())
             step = 0

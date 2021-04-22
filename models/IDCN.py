@@ -6,7 +6,7 @@ from torch import nn
 import torch
 from torch.nn.utils import weight_norm
 import argparse
-
+import numpy as np
 
 class Splitting(nn.Module):
     def __init__(self):
@@ -366,7 +366,7 @@ class IDCNet(nn.Module):
         #     # nn.LeakyReLU(negative_slope=0.01, inplace=True),
         #     # nn.Dropout(0.5),
         # )
-
+        self.horizon = num_classes
         in_planes = input_dim
         out_planes = input_dim * (number_levels + 1)
         self.pe = args.positionalEcoding
@@ -426,6 +426,12 @@ class IDCNet(nn.Module):
             self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
                                          kernel_size=1, stride=1, bias=False)
 
+        self.projection11 = nn.Conv1d(input_dim, input_dim,
+                                     kernel_size=1, stride=1, bias=False)
+
+        self.projection22 = nn.Conv1d(input_dim, input_dim,
+                                      kernel_size=1, stride=1, bias=False)
+
         self.hidden_size = in_planes
         # For positional encoding
         if self.hidden_size % 2 == 1:
@@ -472,11 +478,17 @@ class IDCNet(nn.Module):
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)
+        # temp1 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid.npy', temp1)
+
 
         x += res1
-
+        # x = x.permute(0,2,1)
         x = self.projection1(x)
+        # x = x.permute(0, 2, 1)
         MidOutPut = x
+        # temp2 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'proj1.npy', temp2)
 
         if self.concat_len:
             x = torch.cat((res1[:, -self.concat_len:,:], x), dim=1)
@@ -487,9 +499,17 @@ class IDCNet(nn.Module):
         res2 = x
 
         x = self.blocks2(x, attn_mask=None)
+        # temp3 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'final1.npy', temp3)
         x += res2
+        # x = x.permute(0, 2, 1)
         x = self.projection2(x)
-        return x, MidOutPut
+        # x = x.permute(0, 2, 1)
+        # temp4 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'proj2.npy', temp4)
+
+
+        return x[:,-self.horizon :,:], MidOutPut
 
 
 def get_variable(x):
@@ -537,9 +557,9 @@ if __name__ == '__main__':
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = IDCNet(args, num_classes=12, input_len= 16, input_dim=8,
+    model = IDCNet(args, num_classes=16, input_len= 16, input_dim=8,
                  number_levels=len(part),
-                 number_level_part=part, concat_len = 4).cuda()
+                 number_level_part=part, concat_len = None).cuda()
     x = torch.randn(32, 16, 8).cuda()
     y,res = model(x)
     print(y.shape)

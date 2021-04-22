@@ -103,26 +103,25 @@ class Exp_Informer(Exp_Basic):
             preds.append(pred.numpy())
             trues.append(true.numpy())
             mids.append(mid_pred.numpy())
-            # mae, mse, rmse, mape, mspe = metric(pred, true)
-            # print('mse:{}, mae:{}'.format(mse, mae))
-            # loss = criterion(pred, true)
+
+        
             loss = criterion(pred, true) + criterion(mid_pred, true)
 
             total_loss.append(loss)
         total_loss = np.average(total_loss)
 
         preds = np.array(preds)
-        # mids = np.array(mids)
+        mids = np.array(mids)
         trues = np.array(trues)
         print('test shape:', preds.shape, trues.shape)
         preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
         trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        # mids = mids.reshape(-1, mids.shape[-2], mids.shape[-1])
+        mids = mids.reshape(-1, mids.shape[-2], mids.shape[-1])
         print('test shape:', preds.shape, trues.shape)
 
 
-        # mae, mse, rmse, mape, mspe = metric(mids, trues)
-        # print('Mid: mse:{}, mae:{}, rmse:{}, mape:{}'.format(mse, mae, rmse, mape))
+        mae, mse, rmse, mape, mspe = metric(mids, trues)
+        print('Mid: mse:{}, mae:{}, rmse:{}, mape:{}'.format(mse, mae, rmse, mape))
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('Final: mse:{}, mae:{}, rmse:{}, mape:{}'.format(mse, mae, rmse, mape))
 

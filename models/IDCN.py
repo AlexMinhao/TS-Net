@@ -129,7 +129,10 @@ class Interactor(nn.Module):
             c = x_even.mul(torch.exp(self.psi(x_odd)))
             x_even_update = c + self.U(d)
             x_odd_update = d - self.P(c)
-
+            # d = x_odd.mul(torch.exp(self.phi(x_even)))
+            # c = x_even.mul(torch.exp(self.phi(x_odd)))
+            # x_even_update = c - self.phi(d)
+            # x_odd_update = d + self.phi(c)
             return (x_even_update, x_odd_update)
 
         else:
@@ -194,12 +197,13 @@ class LevelIDCN(nn.Module):
             # We still want to do a BN and RELU, but we will not perform a conv
             # as the input_plane and output_plare are the same
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=True)
+            # self.bootleneck1 = BottleneckBlock(in_planes, in_planes, disable_conv=True)
         else:
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=False)
 
     def forward(self, x):
         (x_even_update, x_odd_update) = self.interact(x)  # 10 9 128
-
+        # print('xxx',x_even_update.shape,x_odd_update.shape)
 
         if self.bootleneck:
             return self.bootleneck(x_even_update).permute(0, 2, 1), x_odd_update
@@ -417,20 +421,20 @@ class IDCNet(nn.Module):
                 m.bias.data.zero_()
 
         self.projection1 = nn.Conv1d(input_len, num_classes,
-                                     kernel_size=1, stride=1, bias=False)
+                                     kernel_size=1, stride=1, padding=0, bias=False)
 
         if self.concat_len:
             self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
                                      kernel_size=1, stride=1, bias=False)
         else:
             self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
-                                         kernel_size=1, stride=1, bias=False)
+                                         kernel_size=1, stride=1, padding=0, bias=False)
 
-        self.projection11 = nn.Conv1d(input_dim, input_dim,
-                                     kernel_size=1, stride=1, bias=False)
+        # self.projection11 = nn.Conv1d(input_dim, input_dim,
+        #                              kernel_size=1, stride=1, bias=False)
 
-        self.projection22 = nn.Conv1d(input_dim, input_dim,
-                                      kernel_size=1, stride=1, bias=False)
+        # self.projection22 = nn.Conv1d(input_dim, input_dim,
+        #                               kernel_size=1, stride=1, bias=False)
 
         self.hidden_size = in_planes
         # For positional encoding

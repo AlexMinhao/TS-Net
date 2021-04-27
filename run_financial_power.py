@@ -27,7 +27,7 @@ parser.add_argument('--batch_size',type=int,default=8,help='batch size')
 parser.add_argument('--lr',type=float,default=5e-3,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 parser.add_argument('--epochs',type=int,default=70,help='')
-parser.add_argument('--hidden-size', default=0.5, type=float, help='hidden channel of module')
+parser.add_argument('--hidden-size', default=1.0, type=float, help='hidden channel of module')
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
@@ -42,6 +42,7 @@ parser.add_argument('--num_concat', type=int, default=21)
 args = parser.parse_args()
 device = torch.device(args.device)
 torch.set_num_threads(3)
+args.num_concat = args.window_size - args.horizon
 print(args)
 
 if args.data == './dataset/electricity.txt':
@@ -480,13 +481,13 @@ def adjust_learning_rate(optimizer, epoch, args):
     elif args.lradj==6:
 
         lr_adjust = {
-            0: 0.0001, 5: 0.0005, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
+            1: 0.0001, 5: 0.0005, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
             , 70: 0.000001
         }
     elif args.lradj==61:
 
         lr_adjust = {
-            0: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 45: 0.00001
+            1: 0.0001, 5: 0.0005, 10:0.001, 25: 0.0005, 35: 0.0001, 45: 0.00001
             , 70: 0.000001
         }
 
@@ -500,13 +501,13 @@ def adjust_learning_rate(optimizer, epoch, args):
     elif args.lradj==8:
 
         lr_adjust = {
-            0: 0.0005, 5: 0.0008, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
+            1: 0.0005, 5: 0.0008, 10:0.001, 20: 0.0001, 30: 0.00005, 40: 0.00001
             , 70: 0.000001
         }
     elif args.lradj==9:
 
         lr_adjust = {
-            0: 0.0001, 10: 0.0005, 20:0.001, 40: 0.0001, 45: 0.00005, 50: 0.00001
+            1: 0.0001, 10: 0.0005, 20:0.001, 40: 0.0001, 45: 0.00005, 50: 0.00001
             , 70: 0.000001
         }
 
@@ -871,7 +872,7 @@ def main_run():
                  number_levels=len(part),
                  number_level_part=part, concat_len= args.num_concat)
     model = model.to(device)
-
+    print(model)
 
 
     # print(args)
@@ -880,7 +881,7 @@ def main_run():
     print('Number of model parameters is', nParams, flush=True)
 
     if args.L1Loss:
-        criterion = smooth_l1_loss #nn.L1Loss(size_average=False).to(device)
+        criterion = smooth_l1_loss #nn.L1Loss(size_average=False).to(device)  nn.L1Loss().to(args.device)
     else:
         criterion = nn.MSELoss(size_average=False).to(device)
     evaluateL2 = nn.MSELoss(size_average=False).to(device)

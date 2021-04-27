@@ -127,8 +127,17 @@ class Interactor(nn.Module):
             # x_even_update = x_even.mul(torch.exp(self.psi(x_odd_update))) + self.U(x_odd_update)
             d = x_odd.mul(torch.exp(self.phi(x_even)))
             c = x_even.mul(torch.exp(self.psi(x_odd)))
+            # d_out = d.detach().cpu().numpy()
+            # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'd1.npy', d_out)
+            # c_out = c.detach().cpu().numpy()
+            # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'c1.npy', c_out)
             x_even_update = c + self.U(d)
             x_odd_update = d - self.P(c)
+
+            # x_even_update_out = x_even_update.detach().cpu().numpy()
+            # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'x_even_update_1.npy', x_even_update_out)
+            # x_odd_update_out = x_odd_update.detach().cpu().numpy()
+            # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'x_odd_update_1.npy', x_odd_update_out)
 
             return (x_even_update, x_odd_update)
 
@@ -208,14 +217,14 @@ class LevelIDCN(nn.Module):
 
 
 class EncoderTree(nn.Module):
-    def __init__(self, level_layers, level_parts, Encoder=True, norm_layer=None):
+    def __init__(self, level_layers, level_parts, num_layers, Encoder=True, norm_layer=None):
         super(EncoderTree, self).__init__()
         self.level_layers = nn.ModuleList(level_layers)
         self.conv_layers = None  # nn.ModuleList(conv_layers) if conv_layers is not None else None
         self.norm = norm_layer
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
         self.level_part = level_parts  # [[0, 1], [0, 0]]
-        self.layers = 3 if len(level_parts) == 7 else 2
+        self.layers = num_layers
         self.count_levels = 0
         self.ecoder = Encoder
 
@@ -272,10 +281,124 @@ class EncoderTree(nn.Module):
 
             else:
                 print("Error!")
+
+        n_4 = []
+        rem16 = [i % 16 for i in n]
+        for i in range(N):
+            if rem16[i] == 0:
+                n_4.append(int(n[i] / 16))
+            elif rem16[i] == 1:
+                n_4.append(int(n[i] / 16 + (15 * N + 15) / 16))
+            elif rem16[i] == 2:
+                n_4.append(int(n[i] / 16 + (7 * N + 14) / 16))
+            elif rem16[i] == 3:
+                n_4.append(int(n[i] / 16 + (11 * N + 13) / 16))
+            elif rem16[i] == 4:
+                n_4.append(int(n[i] / 16 + (3 * N + 12) / 16))
+            elif rem16[i] == 5:
+                n_4.append(int(n[i] / 16 + (13 * N + 11) / 16))
+            elif rem16[i] == 6:
+                n_4.append(int(n[i] / 16 + (5 * N + 10) / 16))
+            elif rem16[i] == 7:
+                n_4.append(int(n[i] / 16 + (9 * N + 9) / 16))
+            elif rem16[i] == 8:
+                n_4.append(int(n[i] / 16 + (1 * N + 8) / 16))
+            elif rem16[i] == 9:
+                n_4.append(int(n[i] / 16 + (14 * N + 7) / 16))
+            elif rem16[i] == 10:
+                n_4.append(int(n[i] / 16 + (6 * N + 6) / 16))
+            elif rem16[i] == 11:
+                n_4.append(int(n[i] / 16 + (10 * N + 5) / 16))
+            elif rem16[i] == 12:
+                n_4.append(int(n[i] / 16 + (2 * N + 4) / 16))
+            elif rem16[i] == 13:
+                n_4.append(int(n[i] / 16 + (12 * N + 3) / 16))
+            elif rem16[i] == 14:
+                n_4.append(int(n[i] / 16 + (4 * N + 2) / 16))
+            elif rem16[i] == 15:
+                n_4.append(int(n[i] / 16 + (8 * N + 1) / 16))
+
+            else:
+                print("Error!")
+
+        n_5 = []
+        rem32 = [i % 32 for i in n]
+        for i in range(N):
+            if rem32[i] == 0:
+                n_5.append(int(n[i] / 32))
+            elif rem32[i] == 1:
+                n_5.append(int(n[i] / 32 + (31 * N + 31) / 32))
+            elif rem32[i] == 2:
+                n_5.append(int(n[i] / 32 + (15 * N + 30) / 32))
+            elif rem32[i] == 3:
+                n_5.append(int(n[i] / 32 + (23 * N + 29) / 32))
+            elif rem32[i] == 4:
+                n_5.append(int(n[i] / 32 + (7 * N + 28) / 32))
+            elif rem32[i] == 5:
+                n_5.append(int(n[i] / 32 + (27 * N + 27) / 32))
+            elif rem32[i] == 6:
+                n_5.append(int(n[i] / 32 + (11 * N + 26) / 32))
+            elif rem32[i] == 7:
+                n_5.append(int(n[i] / 32 + (19 * N + 25) / 32))
+            elif rem32[i] == 8:
+                n_5.append(int(n[i] / 32 + (3 * N + 24) / 32))
+            elif rem32[i] == 9:
+                n_5.append(int(n[i] / 32 + (29 * N + 23) / 32))
+            elif rem32[i] == 10:
+                n_5.append(int(n[i] / 32 + (13 * N + 22) / 32))
+            elif rem32[i] == 11:
+                n_5.append(int(n[i] / 32 + (21 * N + 21) / 32))
+            elif rem32[i] == 12:
+                n_5.append(int(n[i] / 32 + (5 * N + 20) / 32))
+            elif rem32[i] == 13:
+                n_5.append(int(n[i] / 32 + (25 * N + 19) / 32))
+            elif rem32[i] == 14:
+                n_5.append(int(n[i] / 32 + (9 * N + 18) / 32))
+            elif rem32[i] == 15:
+                n_5.append(int(n[i] / 32 + (17 * N + 17) / 32))
+            elif rem32[i] == 16:
+                n_5.append(int(n[i] / 32 + (1 * N + 16) / 32))
+            elif rem32[i] == 17:
+                n_5.append(int(n[i] / 32 + (30 * N + 15) / 32))
+            elif rem32[i] == 18:
+                n_5.append(int(n[i] / 32 + (14 * N + 14) / 32))
+            elif rem32[i] == 19:
+                n_5.append(int(n[i] / 32 + (22 * N + 13) / 32))
+            elif rem32[i] == 20:
+                n_5.append(int(n[i] / 32 + (6 * N + 12) / 32))
+            elif rem32[i] == 21:
+                n_5.append(int(n[i] / 32 + (26 * N + 11) / 32))
+            elif rem32[i] == 22:
+                n_5.append(int(n[i] / 32 + (10 * N + 10) / 32))
+            elif rem32[i] == 23:
+                n_5.append(int(n[i] / 32 + (18 * N + 9) / 32))
+            elif rem32[i] == 24:
+                n_5.append(int(n[i] / 32 + (2 * N + 8) / 32))
+            elif rem32[i] == 25:
+                n_5.append(int(n[i] / 32 + (28 * N + 7) / 32))
+            elif rem32[i] == 26:
+                n_5.append(int(n[i] / 32 + (12 * N + 6) / 32))
+            elif rem32[i] == 27:
+                n_5.append(int(n[i] / 32 + (20 * N + 5) / 32))
+            elif rem32[i] == 28:
+                n_5.append(int(n[i] / 32 + (4 * N + 4) / 32))
+            elif rem32[i] == 29:
+                n_5.append(int(n[i] / 32 + (24 * N + 3) / 32))
+            elif rem32[i] == 30:
+                n_5.append(int(n[i] / 32 + (8 * N + 2) / 32))
+            elif rem32[i] == 31:
+                n_5.append(int(n[i] / 32 + (16 * N + 1) / 32))
+            else:
+                print("Error!")
+
         if layer == 2:
             return [i - 1 for i in n_2]
         if layer == 3:
             return [i - 1 for i in n_3]
+        if layer == 4:
+            return [i - 1 for i in n_4]
+        if layer == 5:
+            return [i - 1 for i in n_5]
 
     def forward(self, x, attn_mask=None):
 
@@ -333,7 +456,7 @@ class Chomp1d(nn.Module):
 
 class IDCNet(nn.Module):
     def __init__(self, args, num_classes, input_len, input_dim=9,
-                 number_levels=4, number_level_part=[[1, 0], [1, 0], [1, 0]],
+                 number_levels=4, number_level_part=[[1, 0], [1, 0], [1, 0]], num_layers = 3,
                  concat_len = None, no_bootleneck=True):
         super(IDCNet, self).__init__()
 
@@ -381,6 +504,7 @@ class IDCNet(nn.Module):
             ],
 
             level_parts=number_level_part,
+            num_layers=num_layers,
             Encoder=True
         )
 
@@ -394,6 +518,7 @@ class IDCNet(nn.Module):
             ],
 
             level_parts=number_level_part,
+            num_layers=num_layers,
             Encoder=False
         )
 
@@ -426,11 +551,11 @@ class IDCNet(nn.Module):
             self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
                                          kernel_size=1, stride=1, bias=False)
 
-        self.projection11 = nn.Conv1d(input_dim, input_dim,
-                                     kernel_size=1, stride=1, bias=False)
-
-        self.projection22 = nn.Conv1d(input_dim, input_dim,
-                                      kernel_size=1, stride=1, bias=False)
+        # self.projection11 = nn.Conv1d(input_dim, input_dim,
+        #                              kernel_size=1, stride=1, bias=False)
+        #
+        # self.projection22 = nn.Conv1d(input_dim, input_dim,
+        #                               kernel_size=1, stride=1, bias=False)
 
         self.hidden_size = in_planes
         # For positional encoding
@@ -477,18 +602,27 @@ class IDCNet(nn.Module):
 
         res1 = x
 
-        x = self.blocks1(x, attn_mask=None)
         # temp1 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid.npy', temp1)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1NPEbt1.npy', temp1)
 
+        x = self.blocks1(x, attn_mask=None)
+        # temp2 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_1NPEbt1.npy', temp2)
+        #
+        # temp_res = self.projection1(res1)
+        # temp_res = temp_res.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1porjNPEbt1.npy', temp_res)
+        # temp_mid = self.projection1(x)
+        # temp_mid = temp_mid.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid1projNPEbt1.npy', temp_mid)
 
         x += res1
-        # x = x.permute(0,2,1)
         x = self.projection1(x)
-        # x = x.permute(0, 2, 1)
+
+
         MidOutPut = x
-        # temp2 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'proj1.npy', temp2)
+        # temp3 = MidOutPut.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack1_outNPEbt1.npy', temp3)
 
         if self.concat_len:
             x = torch.cat((res1[:, -self.concat_len:,:], x), dim=1)
@@ -497,19 +631,31 @@ class IDCNet(nn.Module):
             x = torch.cat((res1, x), dim=1)
 
         res2 = x
+        # temp4 = res2.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2NPEbt1.npy', temp4)
+
 
         x = self.blocks2(x, attn_mask=None)
-        # temp3 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'final1.npy', temp3)
+        # temp5 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_2NPEbt1.npy', temp5)
+
+        # temp_res = self.projection2(res2)
+        # temp_res = temp_res.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2porjNPEbt1.npy', temp_res)
+        # temp_mid = self.projection2(x)
+        # temp_mid = temp_mid.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid2projNPEbt1.npy', temp_mid)
+
+
         x += res2
-        # x = x.permute(0, 2, 1)
+
         x = self.projection2(x)
-        # x = x.permute(0, 2, 1)
-        # temp4 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'proj2.npy', temp4)
+
+        # temp6 = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack2_outNPEbt1.npy', temp6)
 
 
-        return x[:,-self.horizon :,:], MidOutPut
+        return x, MidOutPut
 
 
 def get_variable(x):
@@ -557,9 +703,9 @@ if __name__ == '__main__':
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = IDCNet(args, num_classes=16, input_len= 16, input_dim=8,
+    model = IDCNet(args, num_classes=24, input_len= 96, input_dim=8,
                  number_levels=len(part),
                  number_level_part=part, concat_len = None).cuda()
-    x = torch.randn(32, 16, 8).cuda()
+    x = torch.randn(32, 96, 8).cuda()
     y,res = model(x)
     print(y.shape)

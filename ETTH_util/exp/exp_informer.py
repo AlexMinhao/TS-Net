@@ -7,6 +7,7 @@ from models.IDCN import IDCNet
 from ETTH_util.utils.tools import EarlyStopping, adjust_learning_rate
 from ETTH_util.utils.metrics import metric
 
+from tensorboardX import SummaryWriter
 import numpy as np
 
 import torch
@@ -133,6 +134,9 @@ class Exp_Informer(Exp_Basic):
         vali_data, vali_loader = self._get_data(flag = 'val')
         test_data, test_loader = self._get_data(flag = 'test')
 
+        writer = SummaryWriter('./run_ETTh/{}'.format(self.args.model))
+
+
         path = './checkpoints/'+setting
         if not os.path.exists(path):
             os.makedirs(path)
@@ -182,8 +186,14 @@ class Exp_Informer(Exp_Basic):
             print("Epoch: {0}, Steps: {1} | Test Results =====>")
             test_loss = self.vali(test_data, test_loader, criterion)
 
+
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
                 epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+
+            writer.add_scalar('train_loss', train_loss, global_step=epoch)
+            writer.add_scalar('vali_loss', vali_loss, global_step=epoch)
+            writer.add_scalar('test_loss', test_loss, global_step=epoch)
+
             early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")

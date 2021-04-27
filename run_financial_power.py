@@ -866,9 +866,12 @@ def main_run():
 
     Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
-
-    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    # part = [[1, 1], [0, 0], [0, 0]]  # Best model
+    # part = [[1, 1], [0, 0], [0, 0]] #2
+    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
+    # part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #4
+    #
+    # part = [[1, 1],  [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
+    #           [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #5
 
     if args.model_name =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
@@ -878,7 +881,7 @@ def main_run():
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
                      number_levels=len(part),
-                     number_level_part=part, concat_len= args.num_concat)
+                     number_level_part=part, num_layers = 3, concat_len= args.num_concat)
     model = model.to(device)
 
 

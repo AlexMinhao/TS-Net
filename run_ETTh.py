@@ -1,6 +1,7 @@
 import argparse
 import os
 import torch
+from tensorboardX import SummaryWriter
 
 from ETTH_util.exp.exp_informer import Exp_Informer
 

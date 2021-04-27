@@ -104,7 +104,7 @@ class Exp_Informer(Exp_Basic):
             trues.append(true.numpy())
             mids.append(mid_pred.numpy())
 
-        
+
             loss = criterion(pred, true) + criterion(mid_pred, true)
 
             total_loss.append(loss)

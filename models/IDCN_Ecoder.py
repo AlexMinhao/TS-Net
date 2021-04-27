@@ -332,11 +332,11 @@ class Chomp1d(nn.Module):
         return x[:, :, :-self.chomp_size].contiguous()
 
 
-class IDCNet(nn.Module):
+class IDCNetEcoder(nn.Module):
     def __init__(self, args, num_classes, input_len, input_dim=9,
                  number_levels=4, number_level_part=[[1, 0], [1, 0], [1, 0]],
                  concat_len = None, no_bootleneck=True):
-        super(IDCNet, self).__init__()
+        super(IDCNetEcoder, self).__init__()
 
         # First convolution
 
@@ -485,28 +485,15 @@ class IDCNet(nn.Module):
                 x += pe[:, :, :-1]
             else:
                 x += self.get_position_encoding(x)
-        # res1 = x
-        # if self.first_conv:
-        #     x = x.permute(0, 2, 1)
-        #     x = self.conv_first(x)
-        #     x = x.permute(0, 2, 1)
-        # x = self.creatMask(x)
+
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)
 
-        # x += res1
 
-        # x = self.projection1(x)
 
-        # res2 = x
+        x = self.projection1(x)
 
-        # if self.first_conv:
-        #     x = x.permute(0,2,1)
-        #     x = self.conv_Second(x)
-        #     x = x.permute(0, 2, 1)
-        x = x.reshape(-1,40*96)
-        x = self.projection3(x)
         return x
 
 
@@ -540,7 +527,7 @@ if __name__ == '__main__':
     # part = [ [0, 0]]
 
     print('level number {}, level details: {}'.format(len(part), part))
-    model = IDCNet(args, num_classes=3, input_len= 96, input_dim=40,
+    model = IDCNetEcoder(args, num_classes=3, input_len= 96, input_dim=40,
                  number_levels=len(part),
                  number_level_part=part, concat_len = None).cuda()
     x = torch.randn(32, 96, 40).cuda()

@@ -6,6 +6,8 @@ from util_financial import *
 # from models.StackTWaveNetTransformerEncoder import WASN
 # from models.OriginalStackTWaveNetTransformerEncoder import WASN
 from models.IDCN import IDCNet
+from models.IDCN_Ecoder import IDCNetEcoder
+
 from tensorboardX import SummaryWriter
 import math
 
@@ -692,9 +694,9 @@ def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,wr
         corr = (corr[ind]).mean()
         corr_final_each.append(corr)
 
-    print('Valid_Each_final Rse:', rse_final_each)
-    print('Valid_Each_final Rae:', rae_final_each)
-    print('Valid_Each_final Corr:', corr_final_each)
+    # print('Valid_Each_final Rse:', rse_final_each)
+    # print('Valid_Each_final Rae:', rae_final_each)
+    # print('Valid_Each_final Corr:', corr_final_each)
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -810,9 +812,9 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
         corr = (corr[ind]).mean()
         corr_final_each.append(corr)
 
-    print('TEST_Each_final Rse:', rse_final_each)
-    print('TEST_Each_final Rae:', rae_final_each)
-    print('TEST_Each_final Corr:', corr_final_each)
+    # print('TEST_Each_final Rse:', rse_final_each)
+    # print('TEST_Each_final Rae:', rae_final_each)
+    # print('TEST_Each_final Corr:', corr_final_each)
 
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
@@ -868,9 +870,16 @@ def main_run():
 
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
     # part = [[1, 1], [0, 0], [0, 0]]  # Best model
-    model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
-                 number_levels=len(part),
-                 number_level_part=part, concat_len= args.num_concat)
+
+    if args.model_name =="Enco":
+        model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
+                       number_levels=len(part),
+                       number_level_part=part, concat_len=args.num_concat)
+
+    else:
+        model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
+                     number_levels=len(part),
+                     number_level_part=part, concat_len= args.num_concat)
     model = model.to(device)
     print(model)
 

@@ -20,7 +20,7 @@ parser.add_argument('--save', type=str, default='model/model.pt',
                     help='path to save the final model')
 parser.add_argument('--optim', type=str, default='adam')
 parser.add_argument('--L1Loss', type=bool, default=True)
-parser.add_argument('--normalize', type=int, default=0)
+parser.add_argument('--normalize', type=int, default=3)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
 parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
@@ -86,11 +86,24 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
-        loss = criterion(forecast * scale + bias, ty * scale + bias) + criterion(res * scale + bias, ty * scale + bias)
+        if args.normalize == 3:
+            loss = criterion(forecast, ty) + criterion(res, ty)
+        else:
+            loss = criterion(forecast * scale + bias, ty * scale + bias) + criterion(res * scale + bias, ty * scale + bias)
+
+
         loss.backward()
         total_loss += loss.item()
-        loss_f =  criterion(forecast * scale + bias, ty * scale + bias)
-        loss_m = criterion(res * scale + bias, ty * scale + bias)
+
+        if args.normalize == 3:
+            loss_f = criterion(forecast, ty)
+            loss_m = criterion(res, ty)
+        else:
+            loss_f =  criterion(forecast * scale + bias, ty * scale + bias)
+            loss_m = criterion(res * scale + bias, ty * scale + bias)
+
+
+
         final_loss  += loss_f.item()
         min_loss  += loss_m.item()
         n_samples += (forecast.size(0) * data.m)
@@ -310,9 +323,9 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
         bias = data.bias.expand(output.size(0), data.m)
 
         total_loss += evaluateL2(output * scale + bias, true * scale+ bias).item()
-        total_loss_l1 += evaluateL1(output * scale+ bias, true * scale+ bias).item()
-        total_loss_mid += evaluateL2(output_res * scale+ bias, true * scale+ bias).item()
-        total_loss_l1_mid += evaluateL1(output_res * scale+ bias, true * scale+ bias).item()
+        total_loss_l1 += evaluateL1(output * scale + bias, true * scale+ bias).item()
+        total_loss_mid += evaluateL2(output_res * scale + bias, true * scale+ bias).item()
+        total_loss_l1_mid += evaluateL1(output_res * scale + bias, true * scale+ bias).item()
 
         n_samples += (output.size(0) * data.m)
 
@@ -328,8 +341,8 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     for i in range(forecast_Norm.shape[1]):
         lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale + bias).item()
         lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
-        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
-        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale+ bias).item()
         rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0] / data.m) / data.rse
         rae_F = (lossL1_F / forecast_Norm.shape[0] / data.m) / data.rae
         rse_final_each.append(rse_F.item())
@@ -614,10 +627,17 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
-        loss = criterion(forecast * scale+ bias, ty * scale+ bias)
+        # loss = criterion(forecast * scale+ bias, ty * scale+ bias)
+        loss = criterion(forecast, ty)
         loss.backward()
         total_loss += loss.item()
-        loss_f =  criterion(forecast * scale+ bias, ty * scale+ bias)
+        if args.normalize == 3:
+            loss_f = criterion(forecast, ty)
+        else:
+            loss_f = criterion(forecast * scale + bias, ty * scale + bias)
+
+        # loss_f =  criterion(forecast * scale+ bias, ty * scale+ bias)
+
 
         final_loss  += loss_f.item()
 

@@ -166,7 +166,7 @@ class DataLoaderH(object):
             for i in range(self.m):
                 self.scale[i] = np.std(self.rawdat[:, i]) #std
                 self.bias[i] = np.mean(self.rawdat[:, i])
-                self.dat[:, i] = (self.rawdat[:, i] - self.bias[i])/ self.scale[i]
+                self.dat[:, i] = (self.rawdat[:, i] - self.bias[i]) / self.scale[i]
 
 
     def _split(self, train, valid, test):

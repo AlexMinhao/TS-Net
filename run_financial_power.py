@@ -723,8 +723,10 @@ def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,wr
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
 
     sigma_p = (predict).std(axis=0)
     sigma_g = (Ytest).std(axis=0)
@@ -855,9 +857,7 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     ###############################Middle#######################################################
 
 
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
+
 
 #===================
 
@@ -871,6 +871,10 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
+
+    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
 
     print(
         '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(

@@ -128,14 +128,18 @@ class DataLoaderH(object):
         self.n, self.m = self.dat.shape
         self.normalize = 2
         self.scale = np.ones(self.m)
+        self.bias =  np.zeros(self.m)
         self._normalized(normalize)
         self._split(int(train * self.n), int((train + valid) * self.n), self.n)
 
         self.scale = torch.from_numpy(self.scale).float()
+        self.bias = torch.from_numpy(self.bias).float()
         tmp = self.test[1] * self.scale.expand(self.test[1].size(0), self.h, self.m)
 
         self.scale = self.scale.to(device)
         self.scale = Variable(self.scale)
+        self.bias = self.bias.to(device)
+        self.bias = Variable(self.bias)
 
         tmp = tmp[:, -1, :].squeeze()
         self.rse = normal_std(tmp)
@@ -157,6 +161,13 @@ class DataLoaderH(object):
             for i in range(self.m):
                 self.scale[i] = np.max(np.abs(self.rawdat[:, i]))
                 self.dat[:, i] = self.rawdat[:, i] / np.max(np.abs(self.rawdat[:, i]))
+
+        if (normalize == 3):
+            for i in range(self.m):
+                self.scale[i] = np.std(self.rawdat[:, i]) #std
+                self.bias[i] = np.mean(self.rawdat[:, i])
+                self.dat[:, i] = (self.rawdat[:, i] - self.bias[i])/ self.scale[i]
+
 
     def _split(self, train, valid, test):
 

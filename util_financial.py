@@ -151,12 +151,13 @@ class DataLoaderH(object):
 
         if (normalize == 1):
             self.dat = self.rawdat / np.max(self.rawdat)
-
+            print('k111',np.max(self.rawdat),np.min(self.rawdat),self.rawdat.shape)
         # normlized by the maximum value of each row(sensor).
         if (normalize == 2):
             for i in range(self.m):
                 self.scale[i] = np.max(np.abs(self.rawdat[:, i]))
                 self.dat[:, i] = self.rawdat[:, i] / np.max(np.abs(self.rawdat[:, i]))
+                print(self.m,i,np.max(np.abs(self.rawdat[:, i])),self.rawdat[:, i])
 
     def _split(self, train, valid, test):
 

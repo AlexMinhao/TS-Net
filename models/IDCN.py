@@ -67,20 +67,24 @@ class Interactor(nn.Module):
             size_hidden = args.hidden_size
             modules_P += [
                 nn.ReplicationPad1d(pad),
+                # nn.Dropout(dropout),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(dropout),
+                # nn.ReplicationPad1d(1),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1),
                 nn.Tanh()
             ]
             modules_U += [
                 nn.ReplicationPad1d(pad),
+                # nn.Dropout(dropout),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(dropout),
+                # nn.ReplicationPad1d(1),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1),
                 nn.Tanh()
@@ -88,20 +92,24 @@ class Interactor(nn.Module):
             if self.modified:
                 modules_phi += [
                     nn.ReplicationPad1d(pad),
+                    # nn.Dropout(dropout),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(dropout),
+                    # nn.ReplicationPad1d(1),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1),
                     nn.Tanh()
                 ]
                 modules_psi += [
                     nn.ReplicationPad1d(pad),
+                    # nn.Dropout(dropout),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(dropout),
+                    # nn.ReplicationPad1d(1),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1),
                     nn.Tanh()
@@ -197,7 +205,6 @@ class LevelIDCN(nn.Module):
             # We still want to do a BN and RELU, but we will not perform a conv
             # as the input_plane and output_plare are the same
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=True)
-            # self.bootleneck1 = BottleneckBlock(in_planes, in_planes, disable_conv=True)
         else:
             self.bootleneck = BottleneckBlock(in_planes, in_planes, disable_conv=False)
 
@@ -420,21 +427,24 @@ class IDCNet(nn.Module):
                 # if m.bias is not None:
                 m.bias.data.zero_()
 
-        self.projection1 = nn.Conv1d(input_len, num_classes,
+        # self.group = 2
+        # self.group_num = 3
+        # projection1 = []
+        # projection2 = []
+        # for i in range(self.group_num): 
+        #     projection1.append(nn.Conv1d(int(input_len/self.group), int(num_classes/self.group), kernel_size=1, stride=1, padding=0, bias=False))
+        #     projection2.append(nn.Conv1d(int((input_len + num_classes)/self.group), int(num_classes/self.group), kernel_size=1, stride=1, padding=0, bias=False))
+        # self.projection1 = nn.ModuleList(projection1)
+        # self.projection2 = nn.ModuleList(projection2)
+        self.projection1 = nn.Conv1d(input_len, num_classes, groups =1,
                                      kernel_size=1, stride=1, padding=0, bias=False)
 
         if self.concat_len:
             self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
                                      kernel_size=1, stride=1, bias=False)
         else:
-            self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
+            self.projection2 = nn.Conv1d(input_len + num_classes, num_classes, groups =1,
                                          kernel_size=1, stride=1, padding=0, bias=False)
-
-        # self.projection11 = nn.Conv1d(input_dim, input_dim,
-        #                              kernel_size=1, stride=1, bias=False)
-
-        # self.projection22 = nn.Conv1d(input_dim, input_dim,
-        #                               kernel_size=1, stride=1, bias=False)
 
         self.hidden_size = in_planes
         # For positional encoding
@@ -467,8 +477,6 @@ class IDCNet(nn.Module):
         signal = F.pad(signal, (0, 0, 0, self.hidden_size % 2))
         signal = signal.view(1, max_length, self.hidden_size)
 
-
-
         return signal
 
     def forward(self, x):
@@ -488,7 +496,9 @@ class IDCNet(nn.Module):
 
         x += res1
         # x = x.permute(0,2,1)
+
         x = self.projection1(x)
+
         # x = x.permute(0, 2, 1)
         MidOutPut = x
         # temp2 = x.detach().cpu().numpy()

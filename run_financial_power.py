@@ -35,6 +35,7 @@ parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
 parser.add_argument('--model_name', type=str, default='EncoDeco')
+parser.add_argument('--model_mode', type=str, default='EncoDeco')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 parser.add_argument('--window_size', type=int, default=24) # input size
@@ -44,7 +45,7 @@ parser.add_argument('--num_concat', type=int, default=21)
 args = parser.parse_args()
 device = torch.device(args.device)
 torch.set_num_threads(3)
-args.num_concat = args.window_size - args.horizon
+#args.num_concat = args.window_size - args.horizon
 print(args)
 
 if args.data == './dataset/electricity.txt':
@@ -868,10 +869,10 @@ def main_run():
     Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
 
-    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    # part = [[1, 1], [0, 0], [0, 0]]  # Best model
+    # part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
+    part = [[1, 1], [0, 0], [0, 0]]  # Best model
 
-    if args.model_name =="Enco":
+    if args.model_mode =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
                        number_levels=len(part),
                        number_level_part=part, concat_len=args.num_concat)
@@ -916,7 +917,7 @@ def main_run():
             for epoch in range(1, args.epochs + 1):
                 epoch_start_time = time.time()
                 adjust_learning_rate(optim, epoch, args)
-                if args.model_name =="Enco":
+                if args.model_mode =="Enco":
                     train_loss = trainEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
                                                args.batch_size)
                     val_loss, val_rae, val_corr = evaluateEeco(epoch, Data, Data.valid[0], Data.valid[1], model,

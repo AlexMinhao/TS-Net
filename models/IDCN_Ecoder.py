@@ -25,9 +25,9 @@ class Splitting(nn.Module):
         '''Returns the odd and even part'''
         return (self.even(x), self.odd(x))
 
-
+ 
 class Interactor(nn.Module):
-    def __init__(self, args, in_planes, splitting=True, dropout=0.5,
+    def __init__(self, args, in_planes, splitting=True, dropout=0.25,
                  simple_lifting=False):
         super(Interactor, self).__init__()
         self.modified = args.INN
@@ -385,18 +385,18 @@ class IDCNetEcoder(nn.Module):
             Encoder=True
         )
 
-        self.blocks2 = EncoderTree(
-            [
-                LevelIDCN(args=args, in_planes=in_planes,
-                          lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
-                          share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
+        # self.blocks2 = EncoderTree(
+        #     [
+        #         LevelIDCN(args=args, in_planes=in_planes,
+        #                   lifting_size=[2, 1], kernel_size=4, no_bottleneck=True,
+        #                   share_weights=False, simple_lifting=False, regu_details=0.01, regu_approx=0.01)
 
-                for l in range(number_levels)
-            ],
+        #         for l in range(number_levels)
+        #     ],
 
-            level_parts=number_level_part,
-            Encoder=False
-        )
+        #     level_parts=number_level_part,
+        #     Encoder=False
+        # )
 
         self.concat_len = concat_len
 
@@ -420,14 +420,14 @@ class IDCNetEcoder(nn.Module):
         self.projection1 = nn.Conv1d(input_len, num_classes,
                                      kernel_size=1, stride=1, bias=False)
 
-        if self.concat_len:
-            self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
-                                     kernel_size=1, stride=1, bias=False)
-        else:
-            self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
-                                         kernel_size=1, stride=1, bias=False)
+        # if self.concat_len:
+        #     self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
+        #                              kernel_size=1, stride=1, bias=False)
+        # else:
+        #     self.projection2 = nn.Conv1d(input_len + num_classes, num_classes, 
+        #                                  kernel_size=1, stride=1, bias=False)
 
-        self.projection3 = nn.Linear(input_len*input_dim, num_classes)
+        # self.projection3 = nn.Linear(input_len*input_dim, num_classes)
 
         self.hidden_size = in_planes
         # For positional encoding
@@ -489,9 +489,6 @@ class IDCNetEcoder(nn.Module):
         res1 = x
 
         x = self.blocks1(x, attn_mask=None)
-
-
-
         x = self.projection1(x)
 
         return x

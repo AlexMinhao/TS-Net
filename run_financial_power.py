@@ -12,7 +12,7 @@ from tensorboardX import SummaryWriter
 import math
 
 parser = argparse.ArgumentParser(description='PyTorch Time series forecasting')
-parser.add_argument('--data', type=str, default='./dataset/solar_AL.txt',
+parser.add_argument('--data', type=str, default='./dataset/exchange_rate.txt',
                     help='location of the data file')
 parser.add_argument('--log_interval', type=int, default=2000, metavar='N',
                     help='report interval')
@@ -200,11 +200,28 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     # print('Valid_Each_final Rae:', rae_final_each)
     # print('Valid_Each_final Corr:', corr_final_each)
 
+    # rse = math.sqrt(total_loss / n_samples) / data.rse
+    # rae = (total_loss_l1 / n_samples) / data.rae
+    #
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    #
+    # sigma_p = (predict).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = predict.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation = (correlation[index]).mean()
+###############################Middle#######################################################
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
+    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
+    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
+
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
 
     sigma_p = (predict).std(axis=0)
     sigma_g = (Ytest).std(axis=0)
@@ -213,18 +230,11 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
-###############################Middle#######################################################
-    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
-    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
 
-    res_mid = res_mid.data.cpu().numpy()
-
-    sigma_p = (res_mid).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = res_mid.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    mid_pred = Mid_Norm.cpu().numpy()
+    sigma_p = (mid_pred).std(axis=0)
+    mean_p = mid_pred.mean(axis=0)
+    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation_mid = (correlation_mid[index]).mean()
 
     writer.add_scalar('Validation_final_rse', rse, global_step=epoch)
@@ -337,41 +347,38 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     # print('TEST_Each_final Corr:', corr_final_each)
 
 
+    # rse = math.sqrt(total_loss / n_samples) / data.rse
+    # rae = (total_loss_l1 / n_samples) / data.rae
+    #
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    #
+    # sigma_p = (predict).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = predict.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation = (correlation[index]).mean()
+    # ###############################Middle#######################################################
+    # rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
+    # rae_mid = (total_loss_l1_mid / n_samples) / data.rae
+    #
+    # res_mid = res_mid.data.cpu().numpy()
+    #
+    # sigma_p = (res_mid).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = res_mid.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation_mid = (correlation_mid[index]).mean()
+#===================
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-    ###############################Middle#######################################################
     rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
     rae_mid = (total_loss_l1_mid / n_samples) / data.rae
-
-    res_mid = res_mid.data.cpu().numpy()
-
-    sigma_p = (res_mid).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = res_mid.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation_mid = (correlation_mid[index]).mean()
-
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
-
-    writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
-#===================
 
     predict = forecast_Norm.cpu().numpy()
     Ytest = target_Norm.cpu().numpy()
@@ -383,6 +390,22 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
+
+    mid_pred = Mid_Norm.cpu().numpy()
+    sigma_p = (mid_pred).std(axis=0)
+    mean_p = mid_pred.mean(axis=0)
+    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation_mid = (correlation_mid[index]).mean()
+
+
+
+    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
+
+    writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
+    writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
+    writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
 
     print(
         '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(
@@ -869,7 +892,7 @@ def main_run():
     # part = [[1, 1], [0, 0], [0, 0]] #2
     part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
     # part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #4
-    #
+
     # part = [[1, 1],  [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
     #           [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #5
 

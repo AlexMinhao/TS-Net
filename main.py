@@ -9,7 +9,7 @@ import numpy as np
 from tensorboardX import SummaryWriter
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--train', type=bool, default=True)
+parser.add_argument('--train', type=bool, default=False)
 parser.add_argument('--evaluate', type=bool, default=True)
 parser.add_argument('--finetune', type=bool, default=False)
 parser.add_argument('--dataset', type=str, default='PEMS08')  #PeMS07
@@ -42,7 +42,7 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
-parser.add_argument('--positionalEcoding', type = bool , default=True)
+parser.add_argument('--positionalEcoding', type = bool , default=False)
 parser.add_argument('--num_concat', type=int, default=21)
 parser.add_argument('--normtype', type=int, default=0)
 

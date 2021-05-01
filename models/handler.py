@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from data_loader.forecast_dataloader import ForecastDataset, de_normalized
+from data_loader.forecast_dataloader import ForecastDataset,ForecastTestDataset, de_normalized
 from models.base_model import Model
 import torch
 import torch.nn as nn
@@ -10,7 +10,7 @@ import numpy as np
 import time
 import os
 
-from models.StackTWaveNetTransformerEncoder import WASN
+# from models.StackTWaveNetTransformerEncoder import WASN
 
 # from models.StackTWaveNetEnco2Deco import WASN
 # from models.StackTWaveNetEcoDecoSemi import WASN
@@ -33,7 +33,7 @@ def save_model(model, model_dir, epoch=None):
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08NoLinear.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08EcoDeco1563.pt')
     with open(file_name, 'wb') as f:
         torch.save(model, f)
 
@@ -42,7 +42,7 @@ def load_model(model_dir, epoch=None):
     if not model_dir:
         return
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'Final_best08NoLinear.pt')
+    file_name = os.path.join(model_dir, epoch + 'Final_best08EcoDeco1563.pt')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     if not os.path.exists(file_name):
@@ -71,7 +71,13 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
             forecast_steps = np.zeros([inputs.size()[0], horizon, node_cnt], dtype=np.float)
             Mid_steps = np.zeros([inputs.size()[0], horizon, node_cnt], dtype=np.float)
             while step < horizon:
+                # print(i, inputs.shape[0])
+                # input_save = inputs.detach().cpu().numpy()
+                # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'inputNPEbt1.npy', input_save)
+                # target_save = target.detach().cpu().numpy()
+                # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'targetNPEbt1.npy', target_save)
                 forecast_result, Mid_result = model(inputs)
+
                 len_model_output = forecast_result.size()[1]
                 if len_model_output == 0:
                     raise Exception('Get blank inference result')
@@ -89,6 +95,10 @@ def inference(model, dataloader, device, node_cnt, window_size, horizon):
             Mid_set.append(Mid_steps)
             target_set.append(target.detach().cpu().numpy())
 
+            result_save = np.concatenate(forecast_set, axis=0)
+            np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'predNPEbt1.npy', result_save)
+            target_save = np.concatenate(target_set, axis=0)
+            np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'targetNPEbt1.npy', target_save)
 
     return np.concatenate(forecast_set, axis=0), np.concatenate(target_set, axis=0),np.concatenate(Mid_set, axis=0), np.concatenate(input_set, axis=0)
 
@@ -373,7 +383,7 @@ def train(data, train_data, valid_data, test_data, args, result_file, writer):
                                 normalize_method=args.norm_method, norm_statistic=train_normalize_statistic)
     valid_set = ForecastDataset(valid_data, window_size=args.window_size, horizon=args.horizon,
                                 normalize_method=args.norm_method, norm_statistic=val_normalize_statistic)
-    test_set = ForecastDataset(test_data, window_size=args.window_size, horizon=args.horizon,
+    test_set = ForecastTestDataset(test_data, window_size=args.window_size, horizon=args.horizon,
                                 normalize_method=args.norm_method, norm_statistic=test_normalize_statistic)
     train_loader = torch_data.DataLoader(train_set, batch_size=args.batch_size, drop_last=False, shuffle=True,
                                          num_workers=1)
@@ -477,9 +487,9 @@ def test(test_data, train_data, args, result_train_file, result_test_file, epoch
     forecast_loss = nn.L1Loss().to(args.device) #smooth_l1_loss #nn.MSELoss(reduction='mean').to(args.device)
     model = load_model(result_train_file,epoch=epoch)
     node_cnt = test_data.shape[1]
-    test_set = ForecastDataset(test_data, window_size=args.window_size, horizon=args.horizon,
+    test_set = ForecastTestDataset(test_data, window_size=args.window_size, horizon=args.horizon,
                                normalize_method=args.norm_method, norm_statistic=normalize_statistic)
-    test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size, drop_last=False,
+    test_loader = torch_data.DataLoader(test_set, batch_size=args.batch_size*10, drop_last=False,
                                         shuffle=False, num_workers=0)
     performance_metrics = validate(model = model, epoch = 100, forecast_loss = forecast_loss, dataloader = test_loader, device =args.device, normalize_method = args.norm_method, statistic = normalize_statistic,
                       node_cnt = node_cnt, window_size = args.window_size, horizon =args.horizon,

@@ -12,7 +12,7 @@ from tensorboardX import SummaryWriter
 import math
 
 parser = argparse.ArgumentParser(description='PyTorch Time series forecasting')
-parser.add_argument('--data', type=str, default='./dataset/solar_AL.txt',
+parser.add_argument('--data', type=str, default='./dataset/exchange_rate.txt',
                     help='location of the data file')
 parser.add_argument('--log_interval', type=int, default=2000, metavar='N',
                     help='report interval')
@@ -20,12 +20,12 @@ parser.add_argument('--save', type=str, default='model/model.pt',
                     help='path to save the final model')
 parser.add_argument('--optim', type=str, default='adam')
 parser.add_argument('--L1Loss', type=bool, default=True)
-parser.add_argument('--normalize', type=int, default=0)
+parser.add_argument('--normalize', type=int, default=2)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
 parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
 
-parser.add_argument('--batch_size',type=int,default=8,help='batch size')
+parser.add_argument('--batch_size',type=int,default=64,help='batch size')
 parser.add_argument('--lr',type=float,default=5e-3,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 parser.add_argument('--epochs',type=int,default=70,help='')
@@ -86,12 +86,26 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         forecast, res = model(tx)
         forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
+        bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
-        loss = criterion(forecast * scale, ty * scale) + criterion(res * scale, ty * scale)
+        if args.normalize == 3:
+            loss = criterion(forecast, ty) + criterion(res, ty)
+        else:
+            loss = criterion(forecast * scale + bias, ty * scale + bias) + criterion(res * scale + bias, ty * scale + bias)
+
+
         loss.backward()
         total_loss += loss.item()
-        loss_f =  criterion(forecast * scale, ty * scale)
-        loss_m = criterion(res * scale, ty * scale)
+
+        if args.normalize == 3:
+            loss_f = criterion(forecast, ty)
+            loss_m = criterion(res, ty)
+        else:
+            loss_f =  criterion(forecast * scale + bias, ty * scale + bias)
+            loss_m = criterion(res * scale + bias, ty * scale + bias)
+
+
+
         final_loss  += loss_f.item()
         min_loss  += loss_m.item()
         n_samples += (forecast.size(0) * data.m)
@@ -158,12 +172,13 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
         output = forecast[:,-1,:].squeeze()
         output_res = res[:,-1,:].squeeze()
         scale = data.scale.expand(output.size(0),data.m)
+        bias = data.bias.expand(output.size(0), data.m)
 
 
-        total_loss += evaluateL2(output * scale, true * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
-        total_loss_mid += evaluateL2(output_res * scale, true * scale).item()
-        total_loss_l1_mid += evaluateL1(output_res * scale, true * scale).item()
+        total_loss += evaluateL2(output * scale + bias, true * scale+ bias).item()
+        total_loss_l1 += evaluateL1(output * scale+ bias, true * scale+ bias).item()
+        total_loss_mid += evaluateL2(output_res * scale+ bias, true * scale+ bias).item()
+        total_loss_l1_mid += evaluateL1(output_res * scale+ bias, true * scale+ bias).item()
 
         n_samples += (output.size(0) * data.m)
 
@@ -176,11 +191,12 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     rae_final_each = []
     corr_final_each = []
     Scale = data.scale.expand(forecast_Norm.size(0),data.m)
+    bias = data.bias.expand(forecast_Norm.size(0),data.m)
     for i in range(forecast_Norm.shape[1]):
-        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
-        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
-        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
-        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale + bias, target_Norm[:,i,:] * Scale+ bias).item()
+        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale+ bias, target_Norm[:,i,:] * Scale+ bias).item()
+        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
         rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0]/ data.m) / data.rse
         rae_F = (lossL1_F / forecast_Norm.shape[0]/ data.m) / data.rae
         rse_final_each.append(rse_F.item())
@@ -202,11 +218,28 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     # print('Valid_Each_final Rae:', rae_final_each)
     # print('Valid_Each_final Corr:', corr_final_each)
 
+    # rse = math.sqrt(total_loss / n_samples) / data.rse
+    # rae = (total_loss_l1 / n_samples) / data.rae
+    #
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    #
+    # sigma_p = (predict).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = predict.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation = (correlation[index]).mean()
+###############################Middle#######################################################
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
+    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
+    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
+
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
 
     sigma_p = (predict).std(axis=0)
     sigma_g = (Ytest).std(axis=0)
@@ -215,18 +248,11 @@ def evaluateEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_siz
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
-###############################Middle#######################################################
-    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
-    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
 
-    res_mid = res_mid.data.cpu().numpy()
-
-    sigma_p = (res_mid).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = res_mid.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    mid_pred = Mid_Norm.cpu().numpy()
+    sigma_p = (mid_pred).std(axis=0)
+    mean_p = mid_pred.mean(axis=0)
+    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation_mid = (correlation_mid[index]).mean()
 
     writer.add_scalar('Validation_final_rse', rse, global_step=epoch)
@@ -296,11 +322,12 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
         output = forecast[:, -1, :].squeeze()
         output_res = res[:, -1, :].squeeze()
         scale = data.scale.expand(output.size(0), data.m)
+        bias = data.bias.expand(output.size(0), data.m)
 
-        total_loss += evaluateL2(output * scale, true * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
-        total_loss_mid += evaluateL2(output_res * scale, true * scale).item()
-        total_loss_l1_mid += evaluateL1(output_res * scale, true * scale).item()
+        total_loss += evaluateL2(output * scale + bias, true * scale+ bias).item()
+        total_loss_l1 += evaluateL1(output * scale + bias, true * scale+ bias).item()
+        total_loss_mid += evaluateL2(output_res * scale + bias, true * scale+ bias).item()
+        total_loss_l1_mid += evaluateL1(output_res * scale + bias, true * scale+ bias).item()
 
         n_samples += (output.size(0) * data.m)
 
@@ -312,11 +339,12 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     rae_final_each = []
     corr_final_each = []
     Scale = data.scale.expand(forecast_Norm.size(0), data.m)
+    bias = data.bias.expand(forecast_Norm.size(0), data.m)
     for i in range(forecast_Norm.shape[1]):
-        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
-        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
-        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
-        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale + bias).item()
+        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL2_M = evaluateL2(Mid_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL1_M = evaluateL1(Mid_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale+ bias).item()
         rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0] / data.m) / data.rse
         rae_F = (lossL1_F / forecast_Norm.shape[0] / data.m) / data.rae
         rse_final_each.append(rse_F.item())
@@ -339,41 +367,38 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     # print('TEST_Each_final Corr:', corr_final_each)
 
 
+    # rse = math.sqrt(total_loss / n_samples) / data.rse
+    # rae = (total_loss_l1 / n_samples) / data.rae
+    #
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    #
+    # sigma_p = (predict).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = predict.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation = (correlation[index]).mean()
+    # ###############################Middle#######################################################
+    # rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
+    # rae_mid = (total_loss_l1_mid / n_samples) / data.rae
+    #
+    # res_mid = res_mid.data.cpu().numpy()
+    #
+    # sigma_p = (res_mid).std(axis=0)
+    # sigma_g = (Ytest).std(axis=0)
+    # mean_p = res_mid.mean(axis=0)
+    # mean_g = Ytest.mean(axis=0)
+    # index = (sigma_g != 0)
+    # correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    # correlation_mid = (correlation_mid[index]).mean()
+#===================
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-    ###############################Middle#######################################################
     rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
     rae_mid = (total_loss_l1_mid / n_samples) / data.rae
-
-    res_mid = res_mid.data.cpu().numpy()
-
-    sigma_p = (res_mid).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = res_mid.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation_mid = ((res_mid - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation_mid = (correlation_mid[index]).mean()
-
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
-
-    writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
-#===================
 
     predict = forecast_Norm.cpu().numpy()
     Ytest = target_Norm.cpu().numpy()
@@ -385,6 +410,22 @@ def testEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, w
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
+
+    mid_pred = Mid_Norm.cpu().numpy()
+    sigma_p = (mid_pred).std(axis=0)
+    mean_p = mid_pred.mean(axis=0)
+    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
+    correlation_mid = (correlation_mid[index]).mean()
+
+
+
+    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
+
+    writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
+    writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
+    writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
 
     print(
         '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(
@@ -479,7 +520,7 @@ def adjust_learning_rate(optimizer, epoch, args):
     elif args.lradj==5:
 
         lr_adjust = {
-            40: 0.0001, 60: 0.00005
+            1: 0.0005, 5: 0.0008, 10:0.001, 20: 0.0005, 30: 0.0001, 40: 0.00005,50: 0.00001
         }
     elif args.lradj==6:
 
@@ -586,11 +627,19 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         forecast = model(tx)
         forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
+        bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
-        loss = criterion(forecast * scale, ty * scale)
+        # loss = criterion(forecast * scale+ bias, ty * scale+ bias)
+        loss = criterion(forecast, ty)
         loss.backward()
         total_loss += loss.item()
-        loss_f =  criterion(forecast * scale, ty * scale)
+        if args.normalize == 3:
+            loss_f = criterion(forecast, ty)
+        else:
+            loss_f = criterion(forecast * scale + bias, ty * scale + bias)
+
+        # loss_f =  criterion(forecast * scale+ bias, ty * scale+ bias)
+
 
         final_loss  += loss_f.item()
 
@@ -657,10 +706,11 @@ def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,wr
         output = forecast[:,-1,:].squeeze()
 
         scale = data.scale.expand(output.size(0),data.m)
+        bias = data.bias.expand(output.size(0), data.m)
 
 
-        total_loss += evaluateL2(output * scale, true * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
+        total_loss += evaluateL2(output * scale+bias, true * scale+bias).item()
+        total_loss_l1 += evaluateL1(output * scale+bias, true * scale+bias).item()
 
 
         n_samples += (output.size(0) * data.m)
@@ -674,9 +724,10 @@ def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,wr
     rae_final_each = []
     corr_final_each = []
     Scale = data.scale.expand(forecast_Norm.size(0),data.m)
+    bias = data.bias.expand(forecast_Norm.size(0), data.m)
     for i in range(forecast_Norm.shape[1]):
-        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
-        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale, target_Norm[:,i,:] * Scale).item()
+        lossL2_F = evaluateL2(forecast_Norm[:,i,:] * Scale+bias, target_Norm[:,i,:] * Scale+bias).item()
+        lossL1_F = evaluateL1(forecast_Norm[:,i,:] * Scale+bias, target_Norm[:,i,:] * Scale+bias).item()
 
         rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0]/ data.m) / data.rse
         rae_F = (lossL1_F / forecast_Norm.shape[0]/ data.m) / data.rae
@@ -702,8 +753,10 @@ def evaluateEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,wr
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
 
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
+    # predict = predict.data.cpu().numpy()
+    # Ytest = test.data.cpu().numpy()
+    predict = forecast_Norm.cpu().numpy()
+    Ytest = target_Norm.cpu().numpy()
 
     sigma_p = (predict).std(axis=0)
     sigma_g = (Ytest).std(axis=0)
@@ -777,9 +830,10 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
         output = forecast[:, -1, :].squeeze()
 
         scale = data.scale.expand(output.size(0), data.m)
+        bias = data.bias.expand(output.size(0), data.m)
 
-        total_loss += evaluateL2(output * scale, true * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, true * scale).item()
+        total_loss += evaluateL2(output * scale+bias, true * scale+bias).item()
+        total_loss_l1 += evaluateL1(output * scale+bias, true * scale+bias).item()
 
 
         n_samples += (output.size(0) * data.m)
@@ -792,9 +846,10 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     rae_final_each = []
     corr_final_each = []
     Scale = data.scale.expand(forecast_Norm.size(0), data.m)
+    bias = data.bias.expand(forecast_Norm.size(0), data.m)
     for i in range(forecast_Norm.shape[1]):
-        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
-        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale, target_Norm[:, i, :] * Scale).item()
+        lossL2_F = evaluateL2(forecast_Norm[:, i, :] * Scale + bias, target_Norm[:, i, :] * Scale+ bias).item()
+        lossL1_F = evaluateL1(forecast_Norm[:, i, :] * Scale+ bias, target_Norm[:, i, :] * Scale+ bias).item()
 
         rse_F = math.sqrt(lossL2_F / forecast_Norm.shape[0] / data.m) / data.rse
         rae_F = (lossL1_F / forecast_Norm.shape[0] / data.m) / data.rae
@@ -834,9 +889,7 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     ###############################Middle#######################################################
 
 
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
+
 
 #===================
 
@@ -850,6 +903,10 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     index = (sigma_g != 0)
     correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
     correlation = (correlation[index]).mean()
+
+    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
+    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
+    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
 
     print(
         '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr   {:5.4f}'.format(
@@ -868,9 +925,12 @@ def main_run():
 
     Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
+#    part = [[1, 1], [0, 0], [0, 0]] #2
+    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
+#    part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #4
 
-    # part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # Best model
-    part = [[1, 1], [0, 0], [0, 0]]  # Best model
+    # part = [[1, 1],  [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
+    #           [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #5
 
     if args.model_mode =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
@@ -880,7 +940,7 @@ def main_run():
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
                      number_levels=len(part),
-                     number_level_part=part, concat_len= args.num_concat)
+                     number_level_part=part, num_layers = 3, concat_len= args.num_concat)
     model = model.to(device)
     print(model)
 
@@ -892,6 +952,7 @@ def main_run():
 
     if args.L1Loss:
         criterion = smooth_l1_loss #nn.L1Loss(size_average=False).to(device)  nn.L1Loss().to(args.device)
+        #criterion =  nn.L1Loss().to(args.device)
     else:
         criterion = nn.MSELoss(size_average=False).to(device)
     evaluateL2 = nn.MSELoss(size_average=False).to(device)

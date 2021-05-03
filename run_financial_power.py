@@ -39,8 +39,14 @@ parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 parser.add_argument('--window_size', type=int, default=168) # input size
 parser.add_argument('--horizon', type=int, default=3)  # predication
+
+
 parser.add_argument('--num_concat', type=int, default=165)
 parser.add_argument('--single_step', type=int, default=1)
+parser.add_argument('--single_step_output_One', type=int, default=1)
+
+
+
 
 args = parser.parse_args()
 device = torch.device(args.device)
@@ -83,7 +89,7 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         ty = Y
 
         forecast, res = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
@@ -624,7 +630,7 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         # output = model(tx,id) #torch.Size([32, 1, 137, 1])
         # output = model(tx)  # torch.Size([32, 1, 137, 1])
         forecast = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
@@ -1066,7 +1072,7 @@ def trainSingleEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         ty_last = Y[:,-1,:] #torch.Size([64, 8])
 
         forecast, res = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale_mid = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias_mid = data.bias.expand(forecast.size(0), args.horizon, data.m)
 

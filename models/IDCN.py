@@ -27,7 +27,7 @@ class Splitting(nn.Module):
 
 
 class Interactor(nn.Module):
-    def __init__(self, args, in_planes, splitting=True, dropout=0.25,
+    def __init__(self, args, in_planes, splitting=True, dropout=0.5,
                  simple_lifting=False):
         super(Interactor, self).__init__()
         self.modified = args.INN

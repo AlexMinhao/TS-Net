@@ -28,18 +28,14 @@ parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/varia
 parser.add_argument('--batch_size',type=int,default=64,help='batch size')
 parser.add_argument('--lr',type=float,default=5e-3,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
-parser.add_argument('--epochs',type=int,default=70,help='')
+parser.add_argument('--epochs',type=int,default=100,help='')
 parser.add_argument('--hidden-size', default=1.0, type=float, help='hidden channel of module')
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
-<<<<<<< HEAD
 parser.add_argument('--model_name', type=str, default='EncoDeco')
 parser.add_argument('--model_mode', type=str, default='EncoDeco')
-=======
-parser.add_argument('--model_name', type=str, default='Enco')
->>>>>>> e4310cd530d2025b1c24ed1313a943e9e621d636
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 parser.add_argument('--window_size', type=int, default=160) # input size
@@ -50,7 +46,8 @@ parser.add_argument('--single_step', type=int, default=1)
 args = parser.parse_args()
 device = torch.device(args.device)
 torch.set_num_threads(3)
-#args.num_concat = args.window_size - args.horizon
+args.num_concat = args.window_size - args.horizon
+#args.window_size = args.window_size - args.horizon
 print(args)
 
 if args.data == './dataset/electricity.txt':
@@ -1078,7 +1075,7 @@ def trainSingleEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
 
         scale = data.scale.expand(forecast.size(0), data.m)
         bias = data.bias.expand(forecast.size(0), data.m)
-
+        print('kkk',forecast.shape,scale.shape,ty_last.shape,res.shape,scale_mid.shape,bias_mid.shape,res.shape[1])
         if args.normalize == 3:
             loss = criterion(forecast[:,-1,:], ty_last) + criterion(res, ty)/res.shape[1]
         else:
@@ -1146,7 +1143,10 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
             res_mid = res[:,-1,:].squeeze()
             test = Y
         else:
+            print('xxxx',X.shape,predict.shape,forecast.shape)torch.Size([309, 168, 862]) torch.Size([3200, 862]) torch.Size([309, 24, 862])
+
             predict = torch.cat((predict, forecast))
+            
             res_mid = torch.cat((res_mid, res))
             test = torch.cat((test, Y))
 
@@ -1298,8 +1298,8 @@ def main_run():
 
     Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
-    part = [[1, 1], [0, 0], [0, 0]] #2
-    #part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
+#    part = [[1, 1], [0, 0], [0, 0]] #2
+    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
 #    part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #4
 
     # part = [[1, 1],  [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
@@ -1351,18 +1351,12 @@ def main_run():
             for epoch in range(1, args.epochs + 1):
                 epoch_start_time = time.time()
                 adjust_learning_rate(optim, epoch, args)
-<<<<<<< HEAD
+
                 if args.model_mode =="Enco":
-                    train_loss = trainEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
-                                               args.batch_size)
-                    val_loss, val_rae, val_corr = evaluateEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
-=======
-                if args.model_name =="Enco":
                     if args.single_step:
                         train_loss = trainSingleEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
                                                args.batch_size, writer)
                         val_loss, val_rae, val_corr = evaluateSingleEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
->>>>>>> e4310cd530d2025b1c24ed1313a943e9e621d636
                                                                    evaluateL2, evaluateL1,
                                                                    args.batch_size, writer)
                         test_loss, test_rae, test_corr = testSingleEeco(epoch, Data, Data.test[0], Data.test[1], model,

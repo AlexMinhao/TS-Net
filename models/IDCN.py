@@ -568,6 +568,7 @@ class IDCNet(nn.Module):
         if self.concat_len:
             self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
                                      kernel_size=1, stride=1, bias=False)
+#             self.projection2 = nn.Conv1d(concat_len + num_classes, 1, kernel_size=1, stride=1, bias=False)
         else:
             self.projection2 = nn.Conv1d(input_len + num_classes, num_classes, groups =1,
                                          kernel_size=1, stride=1, padding=0, bias=False)
@@ -666,7 +667,6 @@ class IDCNet(nn.Module):
         x += res2
 
         x = self.projection2(x)
-
         # temp6 = x.detach().cpu().numpy()
         # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack2_outNPEbt1.npy', temp6)
 

@@ -1075,7 +1075,6 @@ def trainSingleEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
 
         scale = data.scale.expand(forecast.size(0), data.m)
         bias = data.bias.expand(forecast.size(0), data.m)
-        print('kkk',forecast.shape,scale.shape,ty_last.shape,res.shape,scale_mid.shape,bias_mid.shape,res.shape[1])
         if args.normalize == 3:
             loss = criterion(forecast[:,-1,:], ty_last) + criterion(res, ty)/res.shape[1]
         else:
@@ -1143,13 +1142,10 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
             res_mid = res[:,-1,:].squeeze()
             test = Y
         else:
-            print('xxxx',X.shape,predict.shape,forecast.shape)torch.Size([309, 168, 862]) torch.Size([3200, 862]) torch.Size([309, 24, 862])
 
-            predict = torch.cat((predict, forecast))
-            
-            res_mid = torch.cat((res_mid, res))
+            predict = torch.cat((predict, forecast[:,-1,:]))
+            res_mid = torch.cat((res_mid, res[:,-1,:]))
             test = torch.cat((test, Y))
-
 
 
         scale = data.scale.expand(forecast.size(0),data.m)
@@ -1162,7 +1158,6 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
         total_loss_l1_mid += evaluateL1(res[:,-1,:] * scale+ bias, Y * scale+ bias).item()
 
         n_samples += (forecast[:,-1,:].size(0) * data.m)
-
 
     rse = math.sqrt(total_loss / n_samples) / data.rse
     rae = (total_loss_l1 / n_samples) / data.rae
@@ -1235,8 +1230,8 @@ def testSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_s
             res_mid = res[:, -1, :].squeeze()
             test = Y
         else:
-            predict = torch.cat((predict, forecast))
-            res_mid = torch.cat((res_mid, res))
+            predict = torch.cat((predict, forecast[:,-1,:]))
+            res_mid = torch.cat((res_mid, res[:,-1,:]))
             test = torch.cat((test, Y))
 
         scale = data.scale.expand(forecast.size(0), data.m)
@@ -1308,7 +1303,7 @@ def main_run():
     if args.model_mode =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
                        number_levels=len(part),
-                       number_level_part=part, num_layers = 3, concat_len=args.num_concat)
+                       number_level_part=part, concat_len=args.num_concat)
 
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,

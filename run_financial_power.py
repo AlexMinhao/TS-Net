@@ -40,10 +40,13 @@ parser.add_argument('--positionalEcoding', type = bool , default=False)
 parser.add_argument('--window_size', type=int, default=168) # input size
 parser.add_argument('--horizon', type=int, default=3)  # predication
 
+parser.add_argument('--dropout', type=float, default=0.5)
 
 parser.add_argument('--num_concat', type=int, default=165)
-parser.add_argument('--single_step', type=int, default=1)
-parser.add_argument('--single_step_output_One', type=int, default=1)
+parser.add_argument('--single_step', type=int, default=0)
+parser.add_argument('--single_step_output_One', type=int, default=0)
+parser.add_argument('--lastWeight', type=float, default=1.1)
+
 
 
 
@@ -92,24 +95,50 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
+        weight = torch.tensor(args.lastWeight).to(device)
+
+        # if args.normalize == 3:
+        #     # loss = criterion(forecast, ty) + criterion(res, ty)
+        # else:
+            # loss = criterion(forecast * scale + bias, ty * scale + bias) + criterion(res * scale + bias, ty * scale + bias)
+
+
 
         if args.normalize == 3:
-            loss = criterion(forecast, ty) + criterion(res, ty)
-        else:
-            loss = criterion(forecast * scale + bias, ty * scale + bias) + criterion(res * scale + bias, ty * scale + bias)
+            if args.lastWeight == 1.0:
+                loss_f = criterion(forecast, ty)
+                loss_m = criterion(res, ty)
+            else:
 
+                loss_f = criterion(forecast[:, :-1, :] ,
+                                   ty[:, :-1, :] ) \
+                         + weight * criterion(forecast[:, -1:, :],
+                                              ty[:, -1:, :] )
+
+                loss_m = criterion(res[:, :-1, :] ,
+                                   ty[:, :-1, :] ) \
+                         + weight * criterion(res[:, -1:, :],
+                                              ty[:, -1:, :] )
+        else:
+            if args.lastWeight == 1.0:
+                loss_f = criterion(forecast * scale + bias, ty * scale + bias)
+                loss_m = criterion(res * scale + bias, ty * scale + bias)
+            else:
+
+                loss_f = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
+                                 ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :]) \
+                       + weight * criterion(forecast[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :],
+                                            ty[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :])
+
+                loss_m = criterion(res[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
+                                 ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :]) \
+                       + weight * criterion(res[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :],
+                                            ty[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :])
+
+        loss = loss_f+loss_m
 
         loss.backward()
         total_loss += loss.item()
-
-        if args.normalize == 3:
-            loss_f = criterion(forecast, ty)
-            loss_m = criterion(res, ty)
-        else:
-            loss_f =  criterion(forecast * scale + bias, ty * scale + bias)
-            loss_m = criterion(res * scale + bias, ty * scale + bias)
-
-
 
         final_loss  += loss_f.item()
         min_loss  += loss_m.item()
@@ -629,31 +658,44 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         ty = Y#[:, id]       #torch.Size([32, 137])
         # output = model(tx,id) #torch.Size([32, 1, 137, 1])
         # output = model(tx)  # torch.Size([32, 1, 137, 1])
-        forecast = model(tx)
+        forecast = model(tx) #torch.Size([64, 3, 8])
         # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
         # loss = criterion(forecast * scale+ bias, ty * scale+ bias)
-        loss = criterion(forecast, ty)
+        weight = torch.tensor(args.lastWeight).to(device)
+        # a = criterion(forecast[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :],
+        #           ty[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :])
+
+        if args.normalize == 3:
+            if args.lastWeight == 1.0:
+                loss = criterion(forecast, ty)
+            else:
+                loss = criterion(forecast[:, :-1, :],
+                                 ty[:, :-1, :])  \
+                       + weight * criterion(forecast[:, -1:, :] ,
+                                                 ty[:, -1:, :] )
+        else:
+            if args.lastWeight == 1.0:
+                loss = criterion(forecast * scale + bias, ty * scale + bias)
+            # loss2 = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
+            #                  ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :])
+            # loss3 = criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+            else:
+                loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
+                       +  weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+
         loss.backward()
         total_loss += loss.item()
-        if args.normalize == 3:
-            loss_f = criterion(forecast, ty)
-        else:
-            loss_f = criterion(forecast * scale + bias, ty * scale + bias)
-
-        # loss_f =  criterion(forecast * scale+ bias, ty * scale+ bias)
-
-
-        final_loss  += loss_f.item()
+        # final_loss  += loss_f.item()
 
         n_samples += (forecast.size(0) * data.m)
         grad_norm = optim.step()
 
         if iter%100==0:
             print('iter:{:3d} | loss: {:.7f}, loss_final: {:.7f}'.format(iter,loss.item()/(forecast.size(0) * data.m),
-                                                                                           loss_f.item()/(forecast.size(0) * data.m)))
+                                                                                           loss.item()/(forecast.size(0) * data.m)))
         iter += 1
 
     writer.add_scalar('Train_loss_tatal', total_loss / n_samples, global_step=epoch)

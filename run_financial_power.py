@@ -47,6 +47,8 @@ parser.add_argument('--single_step', type=int, default=0)
 parser.add_argument('--single_step_output_One', type=int, default=0)
 parser.add_argument('--lastWeight', type=float, default=1.1)
 
+parser.add_argument('--groups', type=int, default=1)
+
 
 
 

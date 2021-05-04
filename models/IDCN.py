@@ -27,7 +27,7 @@ class Splitting(nn.Module):
 
 
 class Interactor(nn.Module):
-    def __init__(self, args, in_planes, splitting=True, dropout=0.5,
+    def __init__(self, args, in_planes, splitting=True, dropout=0,
                  simple_lifting=False):
         super(Interactor, self).__init__()
         self.modified = args.INN
@@ -68,24 +68,24 @@ class Interactor(nn.Module):
             modules_P += [
                 nn.ReplicationPad1d(pad),
                 # nn.Dropout(dropout),
-                nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
+                nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),groups =321,
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(dropout),
                 # nn.ReplicationPad1d(1),
-                nn.Conv1d(int(in_planes * size_hidden), in_planes,
+                nn.Conv1d(int(in_planes * size_hidden), in_planes,groups =321,
                           kernel_size=3, stride=1),
                 nn.Tanh()
             ]
             modules_U += [
                 nn.ReplicationPad1d(pad),
                 # nn.Dropout(dropout),
-                nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
+                nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),groups =321,
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(dropout),
                 # nn.ReplicationPad1d(1),
-                nn.Conv1d(int(in_planes * size_hidden), in_planes,
+                nn.Conv1d(int(in_planes * size_hidden), in_planes,groups =321,
                           kernel_size=3, stride=1),
                 nn.Tanh()
             ]
@@ -93,24 +93,24 @@ class Interactor(nn.Module):
                 modules_phi += [
                     nn.ReplicationPad1d(pad),
                     # nn.Dropout(dropout),
-                    nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
+                    nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),groups =321,
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(dropout),
                     # nn.ReplicationPad1d(1),
-                    nn.Conv1d(int(in_planes * size_hidden), in_planes,
+                    nn.Conv1d(int(in_planes * size_hidden), in_planes,groups =321,
                               kernel_size=3, stride=1),
                     nn.Tanh()
                 ]
                 modules_psi += [
                     nn.ReplicationPad1d(pad),
                     # nn.Dropout(dropout),
-                    nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
+                    nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),groups =321,
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(dropout),
                     # nn.ReplicationPad1d(1),
-                    nn.Conv1d(int(in_planes * size_hidden), in_planes,
+                    nn.Conv1d(int(in_planes * size_hidden), in_planes,groups =321,
                               kernel_size=3, stride=1),
                     nn.Tanh()
                 ]
@@ -565,13 +565,21 @@ class IDCNet(nn.Module):
         self.projection1 = nn.Conv1d(input_len, num_classes, groups =1,
                                      kernel_size=1, stride=1, padding=0, bias=False)
 
-        if self.concat_len:
-            self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
-                                     kernel_size=1, stride=1, bias=False)
-#             self.projection2 = nn.Conv1d(concat_len + num_classes, 1, kernel_size=1, stride=1, bias=False)
+        if args.single_step_output_One:
+
+            if self.concat_len:
+                self.projection2 = nn.Conv1d(concat_len + num_classes, 1,
+                                             kernel_size=1, stride=1, bias=False)
+            else:
+                self.projection2 = nn.Conv1d(input_len + num_classes, 1,
+                                             kernel_size=1, stride=1, bias=False)
         else:
-            self.projection2 = nn.Conv1d(input_len + num_classes, num_classes, groups =1,
-                                         kernel_size=1, stride=1, padding=0, bias=False)
+                if self.concat_len:
+                    self.projection2 = nn.Conv1d(concat_len + num_classes, num_classes,
+                                             kernel_size=1, stride=1, bias=False)
+                else:
+                    self.projection2 = nn.Conv1d(input_len + num_classes, num_classes,
+                                                 kernel_size=1, stride=1, bias=False)
 
 
         self.hidden_size = in_planes
@@ -616,30 +624,29 @@ class IDCNet(nn.Module):
                 x += self.get_position_encoding(x)
 
         res1 = x
-
+        #
         # temp1 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1NPEbt1.npy', temp1)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1.npy', temp1)
 
         x = self.blocks1(x, attn_mask=None)
         # temp2 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_1NPEbt1.npy', temp2)
-        #
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_1.npy', temp2)
+
         # temp_res = self.projection1(res1)
         # temp_res = temp_res.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1porjNPEbt1.npy', temp_res)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res1proj.npy', temp_res)
         # temp_mid = self.projection1(x)
         # temp_mid = temp_mid.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid1projNPEbt1.npy', temp_mid)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid1proj.npy', temp_mid)
 
         x += res1
-        # x = x.permute(0,2,1)
 
         x = self.projection1(x)
 
 
         MidOutPut = x
         # temp3 = MidOutPut.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack1_outNPEbt1.npy', temp3)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack1.npy', temp3)
 
         if self.concat_len:
             x = torch.cat((res1[:, -self.concat_len:,:], x), dim=1)
@@ -649,26 +656,28 @@ class IDCNet(nn.Module):
 
         res2 = x
         # temp4 = res2.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2NPEbt1.npy', temp4)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2.npy', temp4)
 
 
         x = self.blocks2(x, attn_mask=None)
         # temp5 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_2NPEbt1.npy', temp5)
-
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'mid_hid_2.npy', temp5)
+        #
         # temp_res = self.projection2(res2)
         # temp_res = temp_res.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2porjNPEbt1.npy', temp_res)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'res2proj.npy', temp_res)
         # temp_mid = self.projection2(x)
         # temp_mid = temp_mid.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid2projNPEbt1.npy', temp_mid)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'midhid2proj.npy', temp_mid)
 
 
         x += res2
+        # temp_sum = x.detach().cpu().numpy()
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'sum2.npy', temp_sum)
 
         x = self.projection2(x)
         # temp6 = x.detach().cpu().numpy()
-        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack2_outNPEbt1.npy', temp6)
+        # np.save('F:\\school\\Papers\\timeseriesNew\\TS-Net\\output\\PEMS08\\' + 'stack2.npy', temp6)
 
 
         return x, MidOutPut

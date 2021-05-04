@@ -38,10 +38,16 @@ parser.add_argument('--model_name', type=str, default='EncoDeco')
 parser.add_argument('--model_mode', type=str, default='EncoDeco')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
-parser.add_argument('--window_size', type=int, default=160) # input size
-parser.add_argument('--horizon', type=int, default=24)  # predication
-parser.add_argument('--num_concat', type=int, default=None)
+parser.add_argument('--window_size', type=int, default=168) # input size
+parser.add_argument('--horizon', type=int, default=3)  # predication
+
+
+parser.add_argument('--num_concat', type=int, default=165)
 parser.add_argument('--single_step', type=int, default=1)
+parser.add_argument('--single_step_output_One', type=int, default=0)
+
+
+
 
 args = parser.parse_args()
 device = torch.device(args.device)
@@ -86,7 +92,7 @@ def trainEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         ty = Y
 
         forecast, res = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
@@ -627,7 +633,7 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         # output = model(tx,id) #torch.Size([32, 1, 137, 1])
         # output = model(tx)  # torch.Size([32, 1, 137, 1])
         forecast = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
@@ -1069,7 +1075,7 @@ def trainSingleEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         ty_last = Y[:,-1,:] #torch.Size([64, 8])
 
         forecast, res = model(tx)
-        forecast = torch.squeeze(forecast)
+        # forecast = torch.squeeze(forecast)
         scale_mid = data.scale.expand(forecast.size(0), args.horizon, data.m)
         bias_mid = data.bias.expand(forecast.size(0), args.horizon, data.m)
 
@@ -1125,7 +1131,7 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
     test = None
 
 
-    for X, Y in data.get_batches(X, Y, batch_size*200, False):
+    for X, Y in data.get_batches(X, Y, batch_size, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
@@ -1142,7 +1148,6 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
             res_mid = res[:,-1,:].squeeze()
             test = Y
         else:
-
             predict = torch.cat((predict, forecast[:,-1,:]))
             res_mid = torch.cat((res_mid, res[:,-1,:]))
             test = torch.cat((test, Y))
@@ -1320,7 +1325,7 @@ def main_run():
 
     if args.L1Loss:
         criterion = smooth_l1_loss #nn.L1Loss(size_average=False).to(device)  nn.L1Loss().to(args.device)
-        #criterion =  nn.L1Loss().to(args.device)
+    #    criterion =  nn.L1Loss().to(args.device)
     else:
         criterion = nn.MSELoss(size_average=False).to(device)
     evaluateL2 = nn.MSELoss(size_average=False).to(device)

@@ -34,7 +34,7 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
-parser.add_argument('--model_name', type=str, default='EncoDeco')
+parser.add_argument('--model_name', type=str, default='Enco')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
 parser.add_argument('--window_size', type=int, default=168) # input size

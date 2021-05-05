@@ -34,12 +34,12 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
-parser.add_argument('--model_name', type=str, default='EncoDeco')
+parser.add_argument('--model_name', type=str, default='Enco')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
-parser.add_argument('--window_size', type=int, default=168) # input size
-parser.add_argument('--horizon', type=int, default=3)  # predication
-parser.add_argument('--num_concat', type=int, default=165)
+parser.add_argument('--window_size', type=int, default=160) # input size
+parser.add_argument('--horizon', type=int, default=24)  # predication
+parser.add_argument('--num_concat', type=int, default=None)
 parser.add_argument('--single_step', type=int, default=1)
 
 args = parser.parse_args()
@@ -1123,7 +1123,7 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
     test = None
 
 
-    for X, Y in data.get_batches(X, Y, batch_size, False):
+    for X, Y in data.get_batches(X, Y, batch_size*200, False):
         # print('0')
         # X = torch.unsqueeze(X,dim=1)
         # X = X.transpose(2,3)
@@ -1140,8 +1140,8 @@ def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, bat
             res_mid = res[:,-1,:].squeeze()
             test = Y
         else:
-            predict = torch.cat((predict, forecast[:,-1,:]))
-            res_mid = torch.cat((res_mid, res[:,-1,:]))
+            predict = torch.cat((predict, forecast))
+            res_mid = torch.cat((res_mid, res))
             test = torch.cat((test, Y))
 
 
@@ -1229,8 +1229,8 @@ def testSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_s
             res_mid = res[:, -1, :].squeeze()
             test = Y
         else:
-            predict = torch.cat((predict, forecast[:,-1,:]))
-            res_mid = torch.cat((res_mid, res[:,-1,:]))
+            predict = torch.cat((predict, forecast))
+            res_mid = torch.cat((res_mid, res))
             test = torch.cat((test, Y))
 
         scale = data.scale.expand(forecast.size(0), data.m)

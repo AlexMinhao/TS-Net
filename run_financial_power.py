@@ -20,7 +20,7 @@ parser.add_argument('--save', type=str, default='model/model.pt',
                     help='path to save the final model')
 parser.add_argument('--optim', type=str, default='adam')
 parser.add_argument('--L1Loss', type=bool, default=True)
-parser.add_argument('--normalize', type=int, default=2)
+parser.add_argument('--normalize', type=int, default=3)
 parser.add_argument('--device',type=str,default='cuda:0',help='')
 
 parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
@@ -34,13 +34,12 @@ parser.add_argument('--INN', default=1, type=int, help='use INN or basic strateg
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
 parser.add_argument('--lradj', type=int, default=6,help='adjust learning rate')
-parser.add_argument('--model_name', type=str, default='Enco')
+parser.add_argument('--model_name', type=str, default='EncoDeco')
 parser.add_argument('--positionalEcoding', type = bool , default=False)
 
-parser.add_argument('--window_size', type=int, default=160) # input size
-parser.add_argument('--horizon', type=int, default=24)  # predication
-parser.add_argument('--num_concat', type=int, default=None)
-parser.add_argument('--single_step', type=int, default=1)
+parser.add_argument('--window_size', type=int, default=24) # input size
+parser.add_argument('--horizon', type=int, default=3)  # predication
+parser.add_argument('--num_concat', type=int, default=21)
 
 args = parser.parse_args()
 device = torch.device(args.device)
@@ -917,374 +916,6 @@ def testEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, write
     return rse, rae, correlation
 
 
-def trainSingleEeco(epoch, data, X, Y, model, criterion, optim, batch_size, writer):
-    model.train()
-    total_loss = 0
-    n_samples = 0
-    iter = 0
-    for X, Y in data.get_batches(X, Y, batch_size, True):
-        model.zero_grad()
-
-        tx = X  # [:, id, :] #torch.Size([32, 1, 137, 168])
-        ty = Y[:,-1,:]  # [:, id]
-
-
-        output = model(tx)
-        output = output[:,-1,:] #torch.squeeze(output)
-        scale = data.scale.expand(output.size(0), data.m)
-
-        loss = criterion(output * scale, ty * scale)
-        loss.backward()
-        total_loss += loss.item()
-        n_samples += (output.size(0) * data.m)
-        grad_norm = optim.step()
-
-        if iter%100==0:
-            print('iter:{:3d} | loss: {:.3f}'.format(iter,loss.item()/(output.size(0) * data.m)))
-        iter += 1
-
-    writer.add_scalar('TrainSingleEeco loss', total_loss / n_samples, global_step=epoch)
-    return total_loss / n_samples
-
-def evaluateSingleEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, writer):
-    model.eval()
-    total_loss = 0
-    total_loss_l1 = 0
-    n_samples = 0
-    predict = None
-    test = None
-
-    for X, Y in data.get_batches(X, Y, batch_size, False):
-
-        with torch.no_grad():
-            output = model(X)
-        output = output[:,-1,:] #torch.squeeze(output)
-        Y = Y[:,-1,:]
-        if len(output.shape)==1:
-            output = output.unsqueeze(dim=0)
-        if predict is None:
-            predict = output
-            test = Y
-        else:
-            predict = torch.cat((predict, output))
-            test = torch.cat((test, Y))
-
-        scale = data.scale.expand(output.size(0), data.m)
-        total_loss += evaluateL2(output * scale, Y * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, Y * scale).item()
-        n_samples += (output.size(0) * data.m)
-
-    rse = math.sqrt(total_loss / n_samples) / data.rse
-    rae = (total_loss_l1 / n_samples) / data.rae
-
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-
-    writer.add_scalar('Validation_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Validation_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Validation_final_corr', correlation, global_step=epoch)
-
-    print(
-        '|valid_final rse {:5.4f} | valid_final rae {:5.4f} | valid_final corr  {:5.4f}'.format(
-            rse, rae, correlation), flush=True)
-
-    return rse, rae, correlation
-
-def testSingleEeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, writer):
-    model.eval()
-    total_loss = 0
-    total_loss_l1 = 0
-    n_samples = 0
-    predict = None
-    test = None
-
-    for X, Y in data.get_batches(X, Y, batch_size, False):
-
-        with torch.no_grad():
-            output = model(X)
-        output = output[:, -1, :]  # torch.squeeze(output)
-        Y = Y[:, -1, :]
-        if len(output.shape)==1:
-            output = output.unsqueeze(dim=0)
-        if predict is None:
-            predict = output
-            test = Y
-        else:
-            predict = torch.cat((predict, output))
-            test = torch.cat((test, Y))
-
-        scale = data.scale.expand(output.size(0), data.m)
-        total_loss += evaluateL2(output * scale, Y * scale).item()
-        total_loss_l1 += evaluateL1(output * scale, Y * scale).item()
-        n_samples += (output.size(0) * data.m)
-
-    rse = math.sqrt(total_loss / n_samples) / data.rse
-    rae = (total_loss_l1 / n_samples) / data.rae
-
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
-
-    print(
-        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr  {:5.4f}'.format(
-            rse, rae, correlation), flush=True)
-
-    return rse, rae, correlation
-
-
-def trainSingleEecoDeco(epoch, data, X, Y, model, criterion, optim, batch_size):
-    model.train()
-    total_loss = 0
-    n_samples = 0
-    iter = 0
-    final_loss = 0
-    min_loss = 0
-
-    for X, Y in data.get_batches(X, Y, batch_size, True):
-        model.zero_grad()             #torch.Size([32, 168, 137])
-
-
-        tx = X  #torch.Size([64, 24, 8])
-        ty = Y  #torch.Size([64, 24, 8])
-        ty_last = Y[:,-1,:] #torch.Size([64, 8])
-
-        forecast, res = model(tx)
-        forecast = torch.squeeze(forecast)
-        scale_mid = data.scale.expand(forecast.size(0), args.horizon, data.m)
-        bias_mid = data.bias.expand(forecast.size(0), args.horizon, data.m)
-
-        scale = data.scale.expand(forecast.size(0), data.m)
-        bias = data.bias.expand(forecast.size(0), data.m)
-
-        if args.normalize == 3:
-            loss = criterion(forecast[:,-1,:], ty_last) + criterion(res, ty)/res.shape[1]
-        else:
-            loss = criterion(forecast[:,-1,:] * scale + bias, ty_last * scale + bias) + criterion(res * scale_mid + bias_mid, ty * scale_mid + bias_mid)/res.shape[1]
-
-
-        loss.backward()
-        total_loss += loss.item()
-
-        if args.normalize == 3:
-            loss_f = criterion(forecast[:,-1,:], ty_last)
-            loss_m = criterion(res, ty)/res.shape[1]
-        else:
-            loss_f =  criterion(forecast[:,-1,:] * scale + bias, ty_last * scale + bias)
-            loss_m = criterion(res * scale_mid + bias_mid, ty * scale_mid + bias_mid)/res.shape[1]
-
-
-
-        final_loss  += loss_f.item()
-        min_loss  += loss_m.item()
-        n_samples += (forecast.size(0) * data.m)
-        grad_norm = optim.step()
-
-        if iter%100==0:
-            print('iter:{:3d} | loss: {:.7f}, loss_final: {:.7f}, loss_mid: {:.7f}'.format(iter,loss.item()/(forecast.size(0) * data.m),
-                                                                                           loss_f.item()/(forecast.size(0) * data.m),loss_m.item()/(forecast.size(0) * data.m)))
-        iter += 1
-
-    writer.add_scalar('Train_loss_tatal', total_loss / n_samples, global_step=epoch)
-    writer.add_scalar('Train_loss_Mid', min_loss / n_samples, global_step=epoch)
-    writer.add_scalar('Train_loss_Final', final_loss / n_samples, global_step=epoch)
-    print(
-        '| Epoch | train_loss {:5.7f} | final_loss {:5.7f} | mid_loss {:5.7f} '.format(
-            total_loss / n_samples, final_loss / n_samples, min_loss / n_samples), flush=True)
-    return total_loss / n_samples
-
-
-def evaluateSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size,writer):
-    model.eval()
-    total_loss = 0
-    total_loss_l1 = 0
-
-    total_loss_mid = 0
-    total_loss_l1_mid = 0
-    n_samples = 0
-    predict = None
-    res_mid = None
-    test = None
-
-
-    for X, Y in data.get_batches(X, Y, batch_size*200, False):
-        # print('0')
-        # X = torch.unsqueeze(X,dim=1)
-        # X = X.transpose(2,3)
-        Y = Y[:, -1, :]
-
-        with torch.no_grad():
-            forecast, res = model(X) #torch.Size([32, 3, 137])
-
-        if len(forecast.shape)==1:
-            forecast = forecast.unsqueeze(dim=0)
-            res = res.unsqueeze(dim=0)
-        if predict is None:
-            predict = forecast[:,-1,:].squeeze()
-            res_mid = res[:,-1,:].squeeze()
-            test = Y
-        else:
-            predict = torch.cat((predict, forecast))
-            res_mid = torch.cat((res_mid, res))
-            test = torch.cat((test, Y))
-
-
-
-        scale = data.scale.expand(forecast.size(0),data.m)
-        bias = data.bias.expand(forecast.size(0), data.m)
-
-
-        total_loss += evaluateL2(forecast[:,-1,:] * scale + bias, Y * scale+ bias).item()
-        total_loss_l1 += evaluateL1(forecast[:,-1,:] * scale+ bias, Y * scale+ bias).item()
-        total_loss_mid += evaluateL2(res[:,-1,:] * scale+ bias, Y * scale+ bias).item()
-        total_loss_l1_mid += evaluateL1(res[:,-1,:] * scale+ bias, Y * scale+ bias).item()
-
-        n_samples += (forecast[:,-1,:].size(0) * data.m)
-
-
-    rse = math.sqrt(total_loss / n_samples) / data.rse
-    rae = (total_loss_l1 / n_samples) / data.rae
-
-    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
-    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
-
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-
-    mid_pred = res_mid.cpu().numpy()
-    sigma_p = (mid_pred).std(axis=0)
-    mean_p = mid_pred.mean(axis=0)
-    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation_mid = (correlation_mid[index]).mean()
-
-    writer.add_scalar('Validation_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Validation_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Validation_final_corr', correlation, global_step=epoch)
-
-    writer.add_scalar('Validation_mid_rse', rse_mid, global_step=epoch)
-    writer.add_scalar('Validation_mid_rae', rae_mid, global_step=epoch)
-    writer.add_scalar('Validation_mid_corr', correlation_mid, global_step=epoch)
-
-
-    print(
-        '|valid_final rse {:5.4f} | valid_final rae {:5.4f} | valid_final corr  {:5.4f}'.format(
-            rse, rae, correlation), flush=True)
-
-    print(
-        '|valid_mid rse {:5.4f} | valid_mid rae {:5.4f} | valid_mid corr  {:5.4f}'.format(
-            rse_mid, rae_mid, correlation_mid), flush=True)
-    # if epoch%4==0:
-    #     save_model(model, result_file,epoch=epoch)
-    return rse, rae, correlation
-
-
-def testSingleEecoDeco(epoch, data, X, Y, model, evaluateL2, evaluateL1, batch_size, writer):
-    model.eval()
-    total_loss = 0
-    total_loss_l1 = 0
-
-    total_loss_mid = 0
-    total_loss_l1_mid = 0
-    n_samples = 0
-    predict = None
-    res_mid = None
-    test = None
-
-    for X, Y in data.get_batches(X, Y, batch_size * 200, False):
-        # print('0')
-        # X = torch.unsqueeze(X,dim=1)
-        # X = X.transpose(2,3)
-        Y = Y[:, -1, :]
-        with torch.no_grad():
-            forecast, res = model(X)  # torch.Size([32, 3, 137])
-
-        if len(forecast.shape) == 1:
-            forecast = forecast.unsqueeze(dim=0)
-            res = res.unsqueeze(dim=0)
-        if predict is None:
-            predict = forecast[:, -1, :].squeeze()
-            res_mid = res[:, -1, :].squeeze()
-            test = Y
-        else:
-            predict = torch.cat((predict, forecast))
-            res_mid = torch.cat((res_mid, res))
-            test = torch.cat((test, Y))
-
-        scale = data.scale.expand(forecast.size(0), data.m)
-        bias = data.bias.expand(forecast.size(0), data.m)
-
-        total_loss += evaluateL2(forecast[:, -1, :] * scale + bias, Y * scale + bias).item()
-        total_loss_l1 += evaluateL1(forecast[:, -1, :] * scale + bias, Y * scale + bias).item()
-        total_loss_mid += evaluateL2(res[:, -1, :] * scale + bias, Y * scale + bias).item()
-        total_loss_l1_mid += evaluateL1(res[:, -1, :] * scale + bias, Y * scale + bias).item()
-
-        n_samples += (forecast[:, -1, :].size(0) * data.m)
-
-
-
-    rse = math.sqrt(total_loss / n_samples) / data.rse
-    rae = (total_loss_l1 / n_samples) / data.rae
-
-    rse_mid = math.sqrt(total_loss_mid / n_samples) / data.rse
-    rae_mid = (total_loss_l1_mid / n_samples) / data.rae
-
-    predict = predict.data.cpu().numpy()
-    Ytest = test.data.cpu().numpy()
-    sigma_p = (predict).std(axis=0)
-    sigma_g = (Ytest).std(axis=0)
-    mean_p = predict.mean(axis=0)
-    mean_g = Ytest.mean(axis=0)
-    index = (sigma_g != 0)
-    correlation = ((predict - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation = (correlation[index]).mean()
-
-    mid_pred = res_mid.cpu().numpy()
-    sigma_p = (mid_pred).std(axis=0)
-    mean_p = mid_pred.mean(axis=0)
-    correlation_mid = ((mid_pred - mean_p) * (Ytest - mean_g)).mean(axis=0) / (sigma_p * sigma_g)
-    correlation_mid = (correlation_mid[index]).mean()
-
-    writer.add_scalar('Test_final_rse', rse, global_step=epoch)
-    writer.add_scalar('Test_final_rae', rae, global_step=epoch)
-    writer.add_scalar('Test_final_corr', correlation, global_step=epoch)
-
-    writer.add_scalar('Test_mid_rse', rse_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_rae', rae_mid, global_step=epoch)
-    writer.add_scalar('Test_mid_corr', correlation_mid, global_step=epoch)
-
-    print(
-        '|Test_final rse {:5.4f} | Test_final rae {:5.4f} | Test_final corr  {:5.4f}'.format(
-            rse, rae, correlation), flush=True)
-
-    print(
-        '|Test_mid rse {:5.4f} | Test_mid rae {:5.4f} | Test_mid corr  {:5.4f}'.format(
-            rse_mid, rae_mid, correlation_mid), flush=True)
-    # if epoch%4==0:
-    #     save_model(model, result_file,epoch=epoch)
-    return rse, rae, correlation
 
 
 
@@ -1302,7 +933,7 @@ def main_run():
     if args.model_name =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
                        number_levels=len(part),
-                       number_level_part=part, num_layers = 3, concat_len=args.num_concat)
+                       number_level_part=part, concat_len=args.num_concat)
 
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
@@ -1345,26 +976,15 @@ def main_run():
                 epoch_start_time = time.time()
                 adjust_learning_rate(optim, epoch, args)
                 if args.model_name =="Enco":
-                    if args.single_step:
-                        train_loss = trainSingleEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
-                                               args.batch_size, writer)
-                        val_loss, val_rae, val_corr = evaluateSingleEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
+                    train_loss = trainEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
+                                               args.batch_size)
+                    val_loss, val_rae, val_corr = evaluateEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
                                                                    evaluateL2, evaluateL1,
                                                                    args.batch_size, writer)
-                        test_loss, test_rae, test_corr = testSingleEeco(epoch, Data, Data.test[0], Data.test[1], model,
+                    test_loss, test_rae, test_corr = testEeco(epoch, Data, Data.test[0], Data.test[1], model,
                                                                   evaluateL2,
                                                                   evaluateL1,
                                                                   args.batch_size, writer)
-                    else:
-                        train_loss = trainEeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
-                                                   args.batch_size)
-                        val_loss, val_rae, val_corr = evaluateEeco(epoch, Data, Data.valid[0], Data.valid[1], model,
-                                                                       evaluateL2, evaluateL1,
-                                                                       args.batch_size, writer)
-                        test_loss, test_rae, test_corr = testEeco(epoch, Data, Data.test[0], Data.test[1], model,
-                                                                      evaluateL2,
-                                                                      evaluateL1,
-                                                                      args.batch_size, writer)
 
                     print(
                         '| EncoOnly: end of epoch {:3d} | time: {:5.2f}s | train_loss {:5.4f} | valid rse {:5.4f} | valid rae {:5.4f} | valid corr  {:5.4f}|'
@@ -1381,23 +1001,12 @@ def main_run():
                             '--------------| Best Val loss |--------------')
 
                 else:
-                    if args.single_step:
-                        train_loss = trainSingleEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim,
-                                                   args.batch_size)
-                        val_loss, val_rae, val_corr = evaluateSingleEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model,
-                                                                       evaluateL2, evaluateL1,
-                                                                       args.batch_size, writer)
-                        test_loss, test_rae, test_corr = testSingleEecoDeco(epoch, Data, Data.test[0], Data.test[1], model,
-                                                                      evaluateL2,
-                                                                      evaluateL1,
-                                                                      args.batch_size, writer)
-                    else:
-                        train_loss = trainEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim, args.batch_size)
-                        val_loss, val_rae, val_corr = evaluateEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
-                                                           args.batch_size, writer)
-                        test_loss, test_rae, test_corr = testEecoDeco(epoch, Data, Data.test[0], Data.test[1], model, evaluateL2,
-                                                                       evaluateL1,
-                                                                       args.batch_size, writer)
+                    train_loss = trainEecoDeco(epoch, Data, Data.train[0], Data.train[1], model, criterion, optim, args.batch_size)
+                    val_loss, val_rae, val_corr = evaluateEecoDeco(epoch, Data, Data.valid[0], Data.valid[1], model, evaluateL2, evaluateL1,
+                                                       args.batch_size, writer)
+                    test_loss, test_rae, test_corr = testEecoDeco(epoch, Data, Data.test[0], Data.test[1], model, evaluateL2,
+                                                                   evaluateL1,
+                                                                   args.batch_size, writer)
 
 
                     print(

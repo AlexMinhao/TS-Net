@@ -670,23 +670,24 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         # a = criterion(forecast[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :],
         #           ty[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :])
 
-        if args.normalize == 3:
-            if args.lastWeight == 1.0:
-                loss = criterion(forecast, ty)
-            else:
-                loss = criterion(forecast[:, :-1, :],
-                                 ty[:, :-1, :])  \
-                       + weight * criterion(forecast[:, -1:, :] ,
-                                                 ty[:, -1:, :] )
+        # if args.normalize == 3:
+        if args.lastWeight == 1.0:
+            loss = criterion(forecast, ty)
         else:
-            if args.lastWeight == 1.0:
-                loss = criterion(forecast * scale + bias, ty * scale + bias)
-            # loss2 = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
-            #                  ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :])
-            # loss3 = criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
-            else:
-                loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
-                       +  weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+            loss = criterion(forecast[:, :-1, :],
+                             ty[:, :-1, :])  \
+                   + weight * criterion(forecast[:, -1:, :] ,
+                                             ty[:, -1:, :] )
+        # else:
+        #     if args.lastWeight == 1.0:
+        #         loss = criterion(forecast * scale + bias, ty * scale + bias)
+        #
+        #     # loss2 = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
+        #     #                  ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :])
+        #     # loss3 = criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+        #     else:
+        #         loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
+        #                +  weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
 
         loss.backward()
         total_loss += loss.item()

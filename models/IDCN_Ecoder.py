@@ -69,42 +69,42 @@ class Interactor(nn.Module):
             modules_P += [
                 nn.ReplicationPad1d(pad),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
-                          kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
+                          kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(self.dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
-                          kernel_size=3, stride=1, groups= args.groups),
+                          kernel_size=3, stride=1),
                 nn.Tanh()
             ]
             modules_U += [
                 nn.ReplicationPad1d(pad),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
-                          kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
+                          kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
                 nn.Dropout(self.dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
-                          kernel_size=3, stride=1, groups= args.groups),
+                          kernel_size=3, stride=1),
                 nn.Tanh()
             ]
             if self.modified:
                 modules_phi += [
                     nn.ReplicationPad1d(pad),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
-                              kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
+                              kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(self.dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
-                              kernel_size=3, stride=1, groups= args.groups),
+                              kernel_size=3, stride=1),
                     nn.Tanh()
                 ]
                 modules_psi += [
                     nn.ReplicationPad1d(pad),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
-                              kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
+                              kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
                     nn.Dropout(self.dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
-                              kernel_size=3, stride=1, groups= args.groups),
+                              kernel_size=3, stride=1),
                     nn.Tanh()
                 ]
                 self.phi = nn.Sequential(*modules_phi)

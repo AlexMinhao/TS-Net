@@ -33,7 +33,6 @@ class Interactor(nn.Module):
         self.modified = args.INN
         kernel_size = args.kernel
         dilation = args.dilation
-        self.dropout = args.dropout
 
         pad = dilation * (kernel_size - 1) // 2 + 1  # 2 1 0 0
         # pad = k_size // 2
@@ -53,7 +52,7 @@ class Interactor(nn.Module):
                 nn.ReplicationPad1d(pad),
                 nn.Conv2d(in_planes, in_planes,
                           kernel_size=kernel_size, stride=1),
-                nn.Dropout(self.dropout),
+                nn.Dropout(dropout),
                 nn.Tanh()
             ]
             modules_U += [
@@ -61,7 +60,7 @@ class Interactor(nn.Module):
                 nn.Conv2d(in_planes, in_planes,
                           kernel_size=kernel_size, stride=1),
 
-                nn.Dropout(self.dropout),
+                nn.Dropout(dropout),
                 nn.Tanh()
             ]
         else:
@@ -71,7 +70,7 @@ class Interactor(nn.Module):
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                nn.Dropout(self.dropout),
+                nn.Dropout(dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1),
                 nn.Tanh()
@@ -81,7 +80,7 @@ class Interactor(nn.Module):
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                nn.Dropout(self.dropout),
+                nn.Dropout(dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1),
                 nn.Tanh()
@@ -92,7 +91,7 @@ class Interactor(nn.Module):
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                    nn.Dropout(self.dropout),
+                    nn.Dropout(dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1),
                     nn.Tanh()
@@ -102,7 +101,7 @@ class Interactor(nn.Module):
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
-                    nn.Dropout(self.dropout),
+                    nn.Dropout(dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1),
                     nn.Tanh()

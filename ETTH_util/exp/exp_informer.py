@@ -2,6 +2,7 @@ from ETTH_util.data.data_loader import Dataset_ETT_hour, Dataset_ETT_minute
 from ETTH_util.exp.exp_basic import Exp_Basic
 
 from models.IDCN import IDCNet
+from models.IDCN_Ecoder import IDCNetEcoder
 # from models.TCN import TCN
 
 from ETTH_util.utils.tools import EarlyStopping, adjust_learning_rate
@@ -37,8 +38,11 @@ class Exp_Informer(Exp_Basic):
             part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]
             model = IDCNet(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=7,
                            number_levels=len(part),
-                           number_level_part=part, concat_len=None)
-
+                           number_level_part=part, num_layers = 3, concat_len=None)
+            #
+            # model = IDCNetEcoder(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=7,
+            #                number_levels=len(part),
+            #                number_level_part=part, num_layers = 3, concat_len=None)
             # channel_sizes = [self.args.nhid] * self.args.levels
             # model = TCN(7, self.args.seq_len, channel_sizes, kernel_size=self.args.kernel, dropout=self.args.dropout)
         
@@ -243,8 +247,8 @@ class Exp_Informer(Exp_Basic):
         mae, mse, rmse, mape, mspe = metric(preds, trues)
         print('mse:{}, mae:{}'.format(mse, mae))
 
-        np.save(folder_path+'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-        np.save(folder_path+'pred.npy', preds)
-        np.save(folder_path+'true.npy', trues)
+        np.save(folder_path+'etth_metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
+        np.save(folder_path+'etth_pred.npy', preds)
+        np.save(folder_path+'etth_true.npy', trues)
 
         return

@@ -59,7 +59,7 @@ parser.add_argument('--hidden-size', default=1, type=int, help='hidden channel o
 parser.add_argument('--INN', default=1, type=int, help='use INN or basic strategy')
 parser.add_argument('--kernel', default=5, type=int, help='kernel size')
 parser.add_argument('--dilation', default=1, type=int, help='dilation')
-parser.add_argument('--window_size', default=12, type=int, help='dilation')
+parser.add_argument('--window_size', default=12, type=int, help='input size')
 
 parser.add_argument('--positionalEcoding', type=bool, default=False)
 parser.add_argument('--missingRatio', type=float, default=0.4)
@@ -71,6 +71,13 @@ parser.add_argument('--levels', type=int, default=7,
                     help='# of levels (default: 8)')
 parser.add_argument('--nhid', type=int, default=32,
                     help='number of hidden units per layer (default: 30)')
+parser.add_argument('--model_name', type=str, default='EncoDeco')
+parser.add_argument('--model_mode', type=str, default='EncoDeco')
+
+parser.add_argument('--num_concat', type=int, default=0)
+parser.add_argument('--groups', type=int, default=1)
+parser.add_argument('--layers', type=int, default=3)
+
 # parser.add_argument('--horizon', type=int, default=24)
 
 args = parser.parse_args()

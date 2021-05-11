@@ -33,11 +33,15 @@ class Exp_Informer(Exp_Basic):
             a = 0
 
         else:
+            if self.args.layers == 2:
+                part = [[1, 1], [0, 0], [0, 0]]
+            if self.args.layers == 3:
+                part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]
+            if self.args.layers == 4:
+                part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
 
-            part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]
             model = IDCNet(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=7,
-                           number_levels=len(part),
-                           number_level_part=part, concat_len=None)
+                           number_levels=len(part),number_level_part=part, num_layers = self.args.layers, concat_len=self.args.num_concat)
 
             # channel_sizes = [self.args.nhid] * self.args.levels
             # model = TCN(7, self.args.seq_len, channel_sizes, kernel_size=self.args.kernel, dropout=self.args.dropout)
@@ -121,10 +125,10 @@ class Exp_Informer(Exp_Basic):
         print('test shape:', preds.shape, trues.shape)
 
 
-        mae, mse, rmse, mape, mspe = metric(mids, trues)
-        print('Mid: mse:{}, mae:{}, rmse:{}, mape:{}'.format(mse, mae, rmse, mape))
-        mae, mse, rmse, mape, mspe = metric(preds, trues)
-        print('Final: mse:{}, mae:{}, rmse:{}, mape:{}'.format(mse, mae, rmse, mape))
+        mae, mse, rmse, mape, mspe, corr = metric(mids, trues)
+        print('Mid: mse:{}, mae:{}, rmse:{}, mape:{}, corr:{}'.format(mse, mae, rmse, mape, corr))
+        mae, mse, rmse, mape, mspe, corr = metric(preds, trues)
+        print('Final: mse:{}, mae:{}, rmse:{}, mape:{}, corr:{}'.format(mse, mae, rmse, mape, corr))
 
         self.model.train()
         return total_loss
@@ -240,8 +244,8 @@ class Exp_Informer(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        mae, mse, rmse, mape, mspe = metric(preds, trues)
-        print('mse:{}, mae:{}'.format(mse, mae))
+        mae, mse, rmse, mape, mspe, corr = metric(preds, trues)
+        print('mse:{}, mae:{}, rmse:{}, mape:{}, corr:{}'.format(mse, mae, rmse, mape, corr))
 
         np.save(folder_path+'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path+'pred.npy', preds)

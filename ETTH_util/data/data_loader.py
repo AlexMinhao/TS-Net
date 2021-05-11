@@ -53,6 +53,7 @@ class Dataset_ETT_hour(Dataset):
             df_data = df_raw[[self.target]]
 
         if self.scale:
+            print('data norm')
             data = scaler.fit_transform(df_data.values)
         else:
             data = df_data.values
@@ -64,7 +65,8 @@ class Dataset_ETT_hour(Dataset):
         df_stamp['weekday'] = df_stamp.date.apply(lambda row:row.weekday(),1)
         df_stamp['hour'] = df_stamp.date.apply(lambda row:row.hour,1)
         data_stamp = df_stamp.drop(['date'],1).values  #(8640, 4)
-        
+        print('hhhh',border1,border2) 
+        print('kkk',data_stamp)
         self.data_x = data[border1:border2]
         self.data_y = data[border1:border2]
         self.data_stamp = data_stamp
@@ -77,6 +79,8 @@ class Dataset_ETT_hour(Dataset):
 
         seq_x = self.data_x[s_begin:s_end]  # 0 - 24
         seq_y = self.data_y[r_begin:r_end] # 0 - 48
+        print('hcccc',s_begin,s_end,r_begin,r_end)
+        print('kkkk',seq_x.shape,seq_x,'xxxx',seq_y.shape,seq_y)
         seq_x_mark = self.data_stamp[s_begin:s_end]
         seq_y_mark = self.data_stamp[r_begin:r_end]
 
@@ -84,6 +88,9 @@ class Dataset_ETT_hour(Dataset):
     
     def __len__(self):
         return len(self.data_x) - self.seq_len- self.pred_len + 1
+
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
 
 class Dataset_ETT_minute(Dataset):
     def __init__(self, root_path, flag='train', size=None, 
@@ -163,6 +170,8 @@ class Dataset_ETT_minute(Dataset):
     def __len__(self):
         return len(self.data_x) - self.seq_len- self.pred_len + 1
 
+    def inverse_transform(self, data):
+        return self.scaler.inverse_transform(data)
 
 class Dataset_ECL_hour(Dataset):
     def __init__(self, root_path, flag='train', size=None,

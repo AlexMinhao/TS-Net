@@ -51,7 +51,7 @@ parser.add_argument('--single_step_output_One', type=int, default=0)
 parser.add_argument('--lastWeight', type=float, default=1.0)
 
 parser.add_argument('--groups', type=int, default=1)
-
+parser.add_argument('--layers', type=int, default=3)
 args = parser.parse_args()
 device = torch.device(args.device)
 torch.set_num_threads(3)
@@ -670,26 +670,36 @@ def trainEeco(epoch, data, X, Y, model, criterion, optim, batch_size):
         # a = criterion(forecast[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :],
         #           ty[:, -1:, :] * scale[:, -1:, :] + bias[:, -1:, :])
 
-        if args.normalize == 3:
-            if args.lastWeight == 1.0:
-                loss = criterion(forecast, ty)
-            else:
-                loss = criterion(forecast[:, :-1, :],
-                                 ty[:, :-1, :])  \
-                       + weight * criterion(forecast[:, -1:, :] ,
-                                                 ty[:, -1:, :] )
+        # if args.normalize == 3:
+#        if args.lastWeight == 1.0:
+#        loss = criterion(forecast, ty)
+#        else:
+#<<<<<<< HEAD
+        if args.lastWeight == 1.0:
+             loss = criterion(forecast * scale + bias, ty * scale + bias)
+#             loss = criterion(forecast, ty)
         else:
-            if args.lastWeight == 1.0:
-                loss = criterion(forecast * scale + bias, ty * scale + bias)
-            # loss2 = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
-            #                  ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :])
-            # loss3 = criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
-            else:
-                loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
+             loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
                        +  weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+             print(criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:]),weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:]))
+#             loss = criterion(forecast[:, :-1, :],
+#                             ty[:, :-1, :])  \
+#                   + weight * criterion(forecast[:, -1:, :] ,
+#                                             ty[:, -1:, :] )
+        # else:
+        #     if args.lastWeight == 1.0:
+        #         loss = criterion(forecast * scale + bias, ty * scale + bias)
+        #
+        #     # loss2 = criterion(forecast[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :],
+        #     #                  ty[:, :-1, :] * scale[:, :-1, :] + bias[:, :-1, :])
+        #     # loss3 = criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+        #     else:
+        #         loss = criterion(forecast[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:], ty[:,:-1,:] * scale[:,:-1,:] + bias[:,:-1,:])\
+        #                +  weight * criterion(forecast[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:], ty[:,-1:,:] * scale[:,-1:,:] + bias[:,-1:,:])
+
         loss.backward()
         total_loss += loss.item()
-        # final_loss  += loss_f.item()
+        #final_loss  += loss_f.item()
 
         n_samples += (forecast.size(0) * data.m)
         grad_norm = optim.step()
@@ -1338,9 +1348,12 @@ def main_run():
 
     Data = DataLoaderH(args.data, 0.6, 0.2, device, args.horizon, args.window_size, args.normalize)
 
-#    part = [[1, 1], [0, 0], [0, 0]] #2
-    part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]  # 3
-#    part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #4
+    if args.layers == 2:
+        part = [[1, 1], [0, 0], [0, 0]]
+    if args.layers == 3:
+        part = [[1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0]]
+    if args.layers == 4:
+        part = [[1, 1],  [1, 1], [1, 1],  [1, 1], [1, 1], [1, 1], [1, 1], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
 
     # part = [[1, 1],  [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1],   [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1], [1, 1],
     #           [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]] #5
@@ -1348,12 +1361,12 @@ def main_run():
     if args.model_mode =="Enco":
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
                        number_levels=len(part),
-                       number_level_part=part, concat_len=args.num_concat)
+                       number_level_part=part, num_layers = args.layers, concat_len=args.num_concat)
 
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
                      number_levels=len(part),
-                     number_level_part=part, num_layers = 3, concat_len= args.num_concat)
+                     number_level_part=part, num_layers = args.layers, concat_len= args.num_concat)
     model = model.to(device)
     print(model)
 

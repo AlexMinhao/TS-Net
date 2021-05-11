@@ -218,6 +218,7 @@ class EncoderTree(nn.Module):
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
         self.level_part = level_parts  # [[0, 1], [0, 0]]
         self.layers = num_layers #3 if len(level_parts) == 7 else 2
+        print('layer number:',self.layers)
         self.count_levels = 0
         self.ecoder = Encoder
 

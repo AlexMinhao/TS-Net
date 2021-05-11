@@ -67,9 +67,12 @@ class Interactor(nn.Module):
             size_hidden = args.hidden_size
             modules_P += [
                 nn.ReplicationPad1d(pad),
+#		nn.ConstantPad1d(2, 0),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
+                #nn.ReLU(inplace=True),
+#                nn.ReplicationPad1d(1),
                 nn.Dropout(self.dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1, groups= args.groups),
@@ -77,9 +80,12 @@ class Interactor(nn.Module):
             ]
             modules_U += [
                 nn.ReplicationPad1d(pad),
+#		nn.ConstantPad1d(2,0),
                 nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                           kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
                 nn.LeakyReLU(negative_slope=0.01, inplace=True),
+#                nn.ReLU(inplace=True),
+#                nn.ReplicationPad1d(1),
                 nn.Dropout(self.dropout),
                 nn.Conv1d(int(in_planes * size_hidden), in_planes,
                           kernel_size=3, stride=1, groups= args.groups),
@@ -87,20 +93,26 @@ class Interactor(nn.Module):
             ]
             if self.modified:
                 modules_phi += [
+#                    nn.ConstantPad1d(2, 0),
                     nn.ReplicationPad1d(pad),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+#                    nn.ReLU(inplace=True),
+#                    nn.ReplicationPad1d(1),
                     nn.Dropout(self.dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1, groups= args.groups),
                     nn.Tanh()
                 ]
                 modules_psi += [
+#                    nn.ConstantPad1d(2, 0),
                     nn.ReplicationPad1d(pad),
                     nn.Conv1d(in_planes * prev_size, int(in_planes * size_hidden),
                               kernel_size=kernel_size, dilation=dilation, stride=1, groups= args.groups),
                     nn.LeakyReLU(negative_slope=0.01, inplace=True),
+#                    nn.ReLU(inplace=True),
+#                    nn.ReplicationPad1d(1),
                     nn.Dropout(self.dropout),
                     nn.Conv1d(int(in_planes * size_hidden), in_planes,
                               kernel_size=3, stride=1, groups= args.groups),
@@ -229,6 +241,7 @@ class EncoderTree(nn.Module):
         # self.level_part = [[1, 1], [0, 0], [0, 0]]
         self.level_part = level_parts  # [[0, 1], [0, 0]]
         self.layers = num_layers
+        print('layer number:',self.layers)
         self.count_levels = 0
         self.ecoder = Encoder
 

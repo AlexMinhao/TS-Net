@@ -613,25 +613,11 @@ class IDCNetEcoder(nn.Module):
                 x += self.get_position_encoding(x)
 
         res1 = x
-        # temp1 = x.detach().cpu().numpy()
-        # np.save('F:\school\Papers\\timeseriesNew\TS-Net\log\\systic\\' + 'res.npy', temp1)
 
         x = self.blocks1(x, attn_mask=None)
 
-        # temp2 = x.detach().cpu().numpy()
-        # np.save('F:\school\Papers\\timeseriesNew\TS-Net\log\\systic\\' + 'hid.npy', temp2)
-        #
-        # temp_res = self.projection1(res1)
-        # temp_res = temp_res.detach().cpu().numpy()
-        # np.save('F:\school\Papers\\timeseriesNew\TS-Net\log\\systic\\' + 'resproj.npy', temp_res)
-        # temp_mid = self.projection1(x)
-        # temp_mid = temp_mid.detach().cpu().numpy()
-        # np.save('F:\school\Papers\\timeseriesNew\TS-Net\log\\systic\\' + 'hidproj.npy', temp_mid)
-
+        hid = x
         x += res1
-
-        # sum1 = x.detach().cpu().numpy()
-        # np.save('F:\school\Papers\\timeseriesNew\TS-Net\log\\systic\\' + 'sum.npy', sum1)
 
         x = self.projection1(x)
 

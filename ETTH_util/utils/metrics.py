@@ -6,16 +6,15 @@ def RSE(pred, true):
 def CORR(pred, true):
     u = ((true-true.mean(0))*(pred-pred.mean(0))).sum(0) 
     d = np.sqrt(((true-true.mean(0))**2*(pred-pred.mean(0))**2).sum(0))
-    print('coooooo',u.shape,d.shape,pred.shape,true.shape)
-    return (u/d).mean(-1)
+    return (u/d).mean()
 
-def corr(pred, true):
-    sig_p = (pred).std(axis=0)
-    sig_g = (true).std(axis=0)
-    m_p = pred.mean(axis=0)
-    m_g = true.mean(axis=0)
+def Corr(pred, true):
+    sig_p = np.std(pred, axis=0)
+    sig_g = np.std(true, axis=0)
+    m_p = pred.mean(0)
+    m_g = true.mean(0)
     ind = (sig_g != 0)
-    corr = ((pred - m_p) * (true - m_g)).mean(axis=0) / (sig_p * sig_g)
+    corr = ((pred - m_p) * (true - m_g)).mean(0) / (sig_p * sig_g)
     corr = (corr[ind]).mean()
     return corr
 
@@ -40,7 +39,6 @@ def metric(pred, true):
     rmse = RMSE(pred, true)
     mape = MAPE(pred, true)
     mspe = MSPE(pred, true)
-    corr = CORR(pred, true)
-    co = corr(pred, true)
-    print('hhhh',corr,co)  
+    #corr1 = CORR(pred, true)
+    corr = Corr(pred, true)
     return mae,mse,rmse,mape,mspe,corr

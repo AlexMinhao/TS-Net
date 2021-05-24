@@ -7,22 +7,22 @@ from scipy.sparse import linalg
 from torch.autograd import Variable
 
 
-def save_model(model, model_dir, epoch=None):
+def save_model(model, model_name, model_dir, epoch=None):
     if model_dir is None:
         return
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'STWN_Noliner.pt')
+    file_name = os.path.join(model_dir, epoch+'_'+ model_name +'.pt')
     with open(file_name, 'wb') as f:
         torch.save(model, f)
 
 
-def load_model(model_dir, epoch=None):
+def load_model(model_dir, model_name, epoch=None):
     if not model_dir:
         return
     epoch = str(epoch) if epoch else ''
-    file_name = os.path.join(model_dir, epoch + 'STWN_Noliner.pt')
+    file_name = os.path.join(model_dir, epoch+'_' + model_name + '.pt')
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     if not os.path.exists(file_name):

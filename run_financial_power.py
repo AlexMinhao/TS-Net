@@ -7,12 +7,12 @@ from util_financial import *
 # from models.OriginalStackTWaveNetTransformerEncoder import WASN
 from models.IDCN import IDCNet
 from models.IDCN_Ecoder import IDCNetEcoder
-
+# from models.TCN import TCN
 from tensorboardX import SummaryWriter
 import math
 
 parser = argparse.ArgumentParser(description='PyTorch Time series forecasting')
-parser.add_argument('--data', type=str, default='./dataset/exchange_rate.txt',
+parser.add_argument('--data', type=str, default='./dataset/solar_AL.txt',
                     help='location of the data file')
 parser.add_argument('--log_interval', type=int, default=2000, metavar='N',
                     help='report interval')
@@ -25,7 +25,7 @@ parser.add_argument('--device',type=str,default='cuda:0',help='')
 
 parser.add_argument('--num_nodes',type=int,default=8,help='number of nodes/variables')
 
-parser.add_argument('--batch_size',type=int,default=64,help='batch size')
+parser.add_argument('--batch_size',type=int,default=8,help='batch size')
 parser.add_argument('--lr',type=float,default=5e-3,help='learning rate')
 parser.add_argument('--weight_decay',type=float,default=0.00001,help='weight decay rate')
 parser.add_argument('--epochs',type=int,default=70,help='')
@@ -49,8 +49,14 @@ parser.add_argument('--lastWeight', type=float, default=1.1)
 
 parser.add_argument('--groups', type=int, default=1)
 
+parser.add_argument('--save_path', type=str, default='./SingleStepCheckpoint')
+parser.add_argument('--dataset_name', type=str, default='electricity')
 
-
+#TCN
+parser.add_argument('--levels', type=int, default=1,
+                    help='# of levels (default: 8)')
+parser.add_argument('--nhid', type=int, default=32,
+                    help='number of hidden units per layer (default: 30)')
 
 
 args = parser.parse_args()
@@ -60,15 +66,19 @@ print(args)
 
 if args.data == './dataset/electricity.txt':
     args.num_nodes = 321
+    args.dataset_name = 'electricity'
 
 if args.data == './dataset/solar_AL.txt':
     args.num_nodes = 137
+    args.dataset_name = 'solar_AL'
 
 if args.data == './dataset/exchange_rate.txt':
     args.num_nodes = 8
+    args.dataset_name = 'exchange_rate'
 
 if args.data == './dataset/traffic.txt':
     args.num_nodes = 862
+    args.dataset_name = 'traffic'
 
 print('dataset {}, the channel size is {}'.format(args.data, args.num_nodes))
 
@@ -1354,6 +1364,10 @@ def main_run():
         model = IDCNetEcoder(args, num_classes=args.horizon, input_len=args.window_size, input_dim=args.num_nodes,
                        number_levels=len(part),
                        number_level_part=part, num_layers = 3, concat_len=args.num_concat)
+        #
+        # channel_sizes = [args.nhid] * 1
+        # model = TCN(args.num_nodes, args.window_size, args.horizon, channel_sizes, kernel_size=args.kernel,
+        #             dropout=args.dropout)
 
     else:
         model = IDCNet(args, num_classes = args.horizon, input_len=args.window_size, input_dim = args.num_nodes,
@@ -1428,6 +1442,7 @@ def main_run():
                         # with open(args.save, 'wb') as f:
                         #     torch.save(model, f)
                         best_val = val_loss
+                        save_model(model, args.dataset_name,args.save_path,  epoch=epoch)
                         print(
                             '--------------| Best Val loss |--------------')
 
@@ -1460,6 +1475,7 @@ def main_run():
                     if val_loss < best_val:
                         # with open(args.save, 'wb') as f:
                         #     torch.save(model, f)
+                        save_model(model, args.dataset_name,args.save_path,  epoch=epoch)
                         best_val = val_loss
                         print(
                             '--------------| Best Val loss |--------------')

@@ -5,4 +5,5 @@ dataset/
 *.idea
 *.xml
 run/
+run_ETTh/
 run_financial/

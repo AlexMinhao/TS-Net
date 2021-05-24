@@ -30,10 +30,10 @@ parser.add_argument('--do_predict', action='store_true', help='whether to predic
 parser.add_argument('--mix', action='store_false', help='use mix attention in generative decoder', default=True)
 parser.add_argument('--cols', type=str, nargs='+', help='file list')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
-parser.add_argument('--itr', type=int, default=5, help='experiments times')
+parser.add_argument('--itr', type=int, default=0, help='experiments times')
 parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
-parser.add_argument('--patience', type=int, default=5, help='early stopping patience')
+parser.add_argument('--patience', type=int, default=15, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--des', type=str, default='test',help='exp description')
 parser.add_argument('--loss', type=str, default='mae',help='loss function')
@@ -122,30 +122,42 @@ mae_ = []
 maes_ = []
 mse_ = []
 mses_ = []
-for ii in range(args.itr):
-    # setting record of experiments
-    setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_mx{}_{}_lr{}_bs{}_hid{}_s{}_l{}_dp{}_inv{}_itr{}'.format(args.model,args.data, args.features, args.seq_len, args.label_len, args.pred_len,args.mix,args.des,args.learning_rate,args.batch_size,args.hidden_size,args.stacks, args.layers,args.dropout,args.inverse,ii)
 
+if args.itr:
+    for ii in range(args.itr):
+        # setting record of experiments
+        setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_mx{}_{}_lr{}_bs{}_hid{}_s{}_l{}_dp{}_inv{}_itr{}'.format(args.model,args.data, args.features, args.seq_len, args.label_len, args.pred_len,args.mix,args.des,args.learning_rate,args.batch_size,args.hidden_size,args.stacks, args.layers,args.dropout,args.inverse,ii)
+
+        exp = Exp(args)  # set experiments
+        print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
+        exp.train(setting)
+
+        print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+        mae, maes, mse, mses = exp.test(setting)
+        mae_.append(mae)
+        mse_.append(mse)
+        maes_.append(maes)
+        mses_.append(mses)
+
+        if args.do_predict:
+            print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
+            exp.predict(setting, True)
+
+        torch.cuda.empty_cache()
+    print('FFFFFinal mean normed mse:{:.4f}, std mse:{:.4f}, mae:{:.4f}, std mae:{:.4f}'.format(np.mean(mse_), np.std(mse_), np.mean(mae_),np.std(mae_)))
+    print('FFFFFinal mean denormed mse:{:.4f}, std mse:{:.4f}, mae:{:.4f}, std mae:{:.4f}'.format(np.mean(mses_),np.std(mses_), np.mean(maes_), np.std(maes_)))
+    print('FFFFFinal min normed mse:{:.4f}, mae:{:.4f}'.format(min(mse_), min(mae_)))
+    print('FFFFFinal min denormed mse:{:.4f}, mae:{:.4f}'.format(min(mses_), min(maes_)))
+else:
+    setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_mx{}_{}_lr{}_bs{}_hid{}_s{}_l{}_dp{}_inv{}_itr{}'.format(args.model,args.data, args.features, args.seq_len, args.label_len, args.pred_len,args.mix,args.des,args.learning_rate,args.batch_size,args.hidden_size,args.stacks, args.layers,args.dropout,args.inverse,args.itr)
     exp = Exp(args)  # set experiments
     print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
     exp.train(setting)
 
     print('>>>>>>>testing : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
     mae, maes, mse, mses = exp.test(setting)
-    mae_.append(mae)
-    mse_.append(mse)
-    maes_.append(maes)
-    mses_.append(mses)
+    print('FFFFFinal mean normed mse:{:.4f},mae:{:.4f},denormed mse:{:.4f},mae:{:.4f}'.format(mse, mae, mses, maes))
 
-    if args.do_predict:
-        print('>>>>>>>predicting : {}<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<'.format(setting))
-        exp.predict(setting, True)
 
-    torch.cuda.empty_cache()
 
-print('FFFFFinal mean normed mse:{:.4f}, std mse:{:.4f}, mae:{:.4f}, std mae:{:.4f}'.format(np.mean(mse_), np.std(mse_), np.mean(mae_),np.std(mae_)))
-print('FFFFFinal mean denormed mse:{:.4f}, std mse:{:.4f}, mae:{:.4f}, std mae:{:.4f}'.format(np.mean(mses_),np.std(mses_), np.mean(maes_), np.std(maes_)))
-#print('FFFFFinal std normed mse:{:.4f}, mae:{:.4f}'.format(np.std(mse_), np.std(mae_)))
-#print('FFFFFinal std denormed mse:{:.4f}, mae:{:.4f}'.format(np.std(mses_), np.std(maes_)))
-print('FFFFFinal min normed mse:{:.4f}, mae:{:.4f}'.format(min(mse_), min(mae_)))
-print('FFFFFinal min denormed mse:{:.4f}, mae:{:.4f}'.format(min(mses_), min(maes_)))
+

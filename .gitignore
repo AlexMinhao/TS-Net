@@ -5,6 +5,8 @@ dataset/
 *.pyc
 *.idea
 *.xml
+*.pth
 run/
 run_ETTh/
 run_financial/
+checkpoints/

@@ -120,7 +120,6 @@ class Interactor(nn.Module):
             (x_even, x_odd) = self.split(x)
         else:
             (x_even, x_odd) = x
-
         if self.modified:
             x_even = x_even.permute(0, 2, 1)
             x_odd = x_odd.permute(0, 2, 1)

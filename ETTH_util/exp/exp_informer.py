@@ -69,11 +69,19 @@ class Exp_Informer(Exp_Basic):
                         [1, 1], [1, 1], [1, 1],[0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0], [0, 0]]
 
             if self.args.stacks==2:
-                model = IDCNet(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=7,
+                if self.args.features == 'S':
+                    in_dim = 1
+                elif self.args.features == 'M':
+                    in_dim = 7
+                model = IDCNet(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=in_dim,
                                number_levels=len(part),
                                number_level_part=part, num_layers=self.args.layers, concat_len=None)
             elif self.args.stacks==1:
-                model = IDCNetEcoder(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=7,
+                if self.args.features == 'S':
+                    in_dim = 1
+                elif self.args.features == 'M':
+                    in_dim = 7
+                model = IDCNetEcoder(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=in_dim,
                                number_levels=len(part),
                                number_level_part=part, num_layers = self.args.layers, concat_len=None)
             else:

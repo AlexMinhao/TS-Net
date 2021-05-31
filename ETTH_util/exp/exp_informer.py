@@ -75,7 +75,7 @@ class Exp_Informer(Exp_Basic):
                     in_dim = 7
                 model = IDCNet(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=in_dim,
                                number_levels=len(part),
-                               number_level_part=part, num_layers=self.args.layers, concat_len=None)
+                               number_level_part=part, num_layers=self.args.layers, concat_len=self.args.concat_len)
             elif self.args.stacks==1:
                 if self.args.features == 'S':
                     in_dim = 1
@@ -83,12 +83,12 @@ class Exp_Informer(Exp_Basic):
                     in_dim = 7
                 model = IDCNetEcoder(self.args, num_classes=self.args.pred_len, input_len=self.args.seq_len, input_dim=in_dim,
                                number_levels=len(part),
-                               number_level_part=part, num_layers = self.args.layers, concat_len=None)
+                               number_level_part=part, num_layers = self.args.layers, concat_len=self.args.concat_len)
             else:
                 print('Error!')
         print(model)
-        if self.args.use_multi_gpu and self.args.use_gpu:
-            model = nn.DataParallel(model, device_ids=self.args.device_ids)
+#        if self.args.use_multi_gpu and self.args.use_gpu:
+#            model = nn.DataParallel(model, device_ids=self.args.device_ids)
         return model.double()
 
     def _get_data(self, flag):
@@ -240,7 +240,7 @@ class Exp_Informer(Exp_Basic):
         vali_data, vali_loader = self._get_data(flag = 'val')
         test_data, test_loader = self._get_data(flag = 'test')
 
-        writer = SummaryWriter('./run_ETTh/{}'.format(self.args.model))
+        writer = SummaryWriter('./run_ETTh/{}'.format(self.args.model_name))
 
         path = os.path.join(self.args.checkpoints, setting)
         if not os.path.exists(path):

@@ -5,15 +5,15 @@ data = ['./dataset/solar_AL.txt', './dataset/exchange_rate.txt','./dataset/elect
 #lr = [5e-5, 1e-4, 5e-4, 1e-3, 5e-3, 1e-2]
 #lr = [1e-3, 2e-3, 3e-3, 4e-3, 5e-3, 6e-3, 7e-3, 8e-3]
 #lr = [1e-3, 5e-3, 7e-3, 9e-3]
-#lr = [1e-4, 5e-4, 1e-3, 5e-3]
-lr = [1e-4,5e-4,1e-3,5e-3,9e-3]
-#lr = [5e-4, 7e-4, 1e-4]
+#lr = [1e-3, 5e-3]
+#lr = [5e-4, 1e-3, 5e-3]
+lr = [5e-5, 1e-4]
 #lr = [4e-4, 3e-4, 6e-4, 7e-4, 8e-4]
 #lr = [5e-3,7e-3,9e-3]
 lradj = [1,5,6,9]
 #batch = [8, 16, 32, 64, 128, 256, 512, 1024]
-batch = [4, 32, 64, 128]
-#batch=[4]
+#batch = [128,256,512,1024]
+batch=[4,8]
 #batch = [256, 512, 1024]
 #batch = [256, 512,1024]
 #batch = [32, 64, 128, 256, 512, 1024, 1280]
@@ -54,9 +54,9 @@ for i, v in enumerate(lr):
 #    cmd = """srun -p x_cerebra --gres=gpu:1 nohup python -u run_ETTh.py --hidden-size 4 --batchSize 32 --epochs 100 --layers 2 --seq_len 24 --label_len 24 --pred_len 24  --num_concat 0 --lradj 1 --lr 1e-4  --kernel 5 --dropout 0.25 --groups 1 --model_name ett2h_I24_out24_type1_lr1e-4_bs32_dp0.25_h4_s2l2 > log/0510_ett2h_I24_out24_type1_lr1e-4_bs32_dp0.25_h4_s2l2.log 2>&1&""".format(v,v,v)
 #        cmd = """srun -p vi_x_cerebra_meta --gres=gpu:1 nohup python -u run_ETTh.py --data ETTm1 --features M  --hidden-size 4 --layers 3 --stacks 1 --seq_len 48 --label_len 24 --pred_len 24 --num_concat 0 --lradj type1 --learning_rate 5e-3 --kernel 5 --batch_size {} --dropout {} --groups 1 --model_name ettm1_I48_out24_type1_lr5e-3_bs{}_d{}_h4_s1l3 --train_epochs 100 --itr 0 > log/0515_ettm1_I48_out24_type1_lr5e-3_bs{}_dp{}_h4_s1l3_e100_itr0.log 2>&1&""".format(k,v,k,v,k,v)
  #       cmd = """ srun -p x_cerebra --gres=gpu:1 nohup python -u run_ETTh.py --data ETTh2 --features M  --hidden-size {} --layers 4 --stacks 1 --seq_len 336 --label_len 168 --pred_len 168 --num_concat 0 --lradj type1 --learning_rate 5e-5 --kernel 5 --batch_size 8 --dropout {} --groups 1 --model_name etth2_I338_out168_type1_lr5e-5_bs8_dp{}_h{}_s1l4_e100 --train_epochs 100 --itr 0 > log/0516_etth2_I338_out168_type1_lr5e-5_bs8_dp{}_h{}_s1l4_itr0.log 2>&1& """.format(v,k,k,v,k,v)
-    #    cmd = """srun -p vi_x_cerebra_meta --gres=gpu:1 nohup python -u run_ETTh.py --data ETTh1 --features S  --hidden-size 4 --layers 3 --stacks 1 --seq_len 720 --label_len 24 --pred_len 24 --num_concat 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0.5 --groups 1 --model_name etth1_I720_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_e100 --train_epochs 100 --itr 0 > log/0601_etth1_I720_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_itr0.log 2>&1&""".format(v,k,v,k,v,k)
-        #cmd = """ srun -p vi_x_cerebra_meta --gres=gpu:1 nohup python -u run_ETTh.py --data ETTh2 --features S  --hidden-size 4 --layers 3 --stacks 1 --seq_len 48 --label_len 24 --pred_len 24 --num_concat 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0.5 --groups 1 --model_name etth2_I48_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_e100 --train_epochs 100 --itr 0 > log/0601_etth2_I48_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_itr0.log 2>&1& """.format(v,k,v,k,v,k)
-        cmd = """ srun -p vi_x_cerebra_meta --gres=gpu:1 nohup python -u run_ETTh.py --data ETTm1 --features S  --hidden-size 4 --layers 3 --stacks 1 --seq_len 96 --label_len 24 --pred_len 24 --num_concat 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0.5 --groups 1 --model_name ettm1_I96_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_e100 --train_epochs 100 --itr 0 > log/0601_ettm1_I96_out24_type1_lr{}_bs{}_dp0.5_h4_s1l3_itr0.log 2>&1& """.format(v,k,v,k,v,k)
+        #cmd = """srun -p x_cerebra --gres=gpu:1 nohup python -u run_ETTh.py --data ETTh1 --features S  --hidden-size 4 --layers 4 --stacks 1 --seq_len 720 --label_len 168 --pred_len 168 --num_concat 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0 --groups 1 --model_name etth1_I720_out168_type1_lr{}_bs{}_dp0_h4_s1l4 --train_epochs 100 --itr 0 > log/0602_etth1_I720_out168_type1_lr{}_bs{}_dp0_h4_s1l4.log 2>&1&""".format(v,k,v,k,v,k)
+    #    cmd = """ srun -p x_cerebra --gres=gpu:1 nohup python -u run_ETTh.py --data ETTh2 --features S  --hidden-size 4 --layers 4 --stacks 1 --seq_len 336 --label_len 168 --pred_len 168 --num_concat 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0 --groups 1 --model_name etth2_I336_out168_type1_lr{}_bs{}_dp0_h4_s1l4 --train_epochs 100 --itr 0 > log/0602_etth2_I336_out168_type1_lr{}_bs{}_dp0_h4_s1l4.log 2>&1& """.format(v,k,v,k,v,k)
+        cmd = """ srun -p x_cerebra --gres=gpu:1 nohup python -u run_ETTh.py --data ETTm1 --features S  --hidden-size 4 --layers 4 --stacks 1 --seq_len 384 --label_len 96 --pred_len 96 --concat_len 0 --lradj type1 --learning_rate {} --kernel 5 --batch_size {} --dropout 0 --groups 1 --model_name ettm1_I384_out96_type1_lr{}_bs{}_dp0_h4_s1l4 --train_epochs 100 --itr 0 > log/0602_ettm1_I384_out96_type1_lr{}_bs{}_dp0_h4_s1l4.log 2>&1& """.format(v,k,v,k,v,k)
         print(cmd)
         call(cmd, shell=True)
 print('Finish!')

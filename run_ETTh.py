@@ -75,7 +75,7 @@ parser.add_argument('--nhid', type=int, default=32,
 parser.add_argument('--model_name', type=str, default='EncoDeco')
 parser.add_argument('--model_mode', type=str, default='EncoDeco')
 
-parser.add_argument('--num_concat', type=int, default=0)
+parser.add_argument('--concat_len', type=int, default=0)
 
 
 args = parser.parse_args()

@@ -30,6 +30,8 @@ class TemporalBlock(nn.Module):
 
         self.net = nn.Sequential(self.conv1, self.chomp1, self.relu1, self.dropout1,
                                  self.conv2, self.chomp2, self.relu2, self.dropout2)
+        # self.net = nn.Sequential(self.conv1,  self.relu1, self.dropout1,
+        #                          self.conv2,  self.relu2, self.dropout2)
         self.downsample = nn.Conv1d(n_inputs, n_outputs, 1) if n_inputs != n_outputs else None
         self.relu = nn.ReLU()
         self.init_weights()
@@ -85,11 +87,12 @@ class TemporalConvNet(nn.Module):
 
 
 class TCN(nn.Module):
-    def __init__(self, input_size, output_size, num_channels, kernel_size, dropout):
+    def __init__(self, input_size, output_len, num_channels, kernel_size, dropout):
         super(TCN, self).__init__()
         self.tcn = TemporalConvNet(input_size, num_channels, kernel_size=kernel_size, dropout=dropout)
         self.linear = nn.Linear(num_channels[-1], input_size)
         self.init_weights()
+        self.output_len = output_len
 
     def init_weights(self):
         self.linear.weight.data.normal_(0, 0.01)
@@ -107,7 +110,8 @@ class TCN(nn.Module):
         x = x.permute(0,2,1)
         y1 = self.tcn(x) #torch.Size([32, 400, 2])  #y1 = torch.Size([32, 30, 400])
         y2 = y1.permute(0,2,1)
-        return self.linear(y2)
+        y2 = self.linear(y2)
+        return y2[:,-self.output_len:,:]
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Sequence Modeling - The Adding Problem')

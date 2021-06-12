@@ -3,12 +3,12 @@ import os
 import torch
 import numpy as np
 from tensorboardX import SummaryWriter
-
+os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
 from ETTH_util.exp.exp_informer import Exp_Informer
 
 parser = argparse.ArgumentParser(description='[Informer] Long Sequences Forecasting')
 
-parser.add_argument('--model', type=str, required=False, default='IDCN', help='model of the experiment')
+parser.add_argument('--model', type=str, required=False, default='TCN', help='model of the experiment')
 
 parser.add_argument('--data', type=str, required=False, default='ETTh1', help='data')
 parser.add_argument('--root_path', type=str, default='./ETTH_util/data/ETT/', help='root path of the data file')
@@ -19,9 +19,9 @@ parser.add_argument('--freq', type=str, default='h', help='freq for time feature
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
 
-parser.add_argument('--seq_len', type=int, default=48, help='input sequence length of Informer encoder')
+parser.add_argument('--seq_len', type=int, default=96, help='input sequence length of Informer encoder')
 parser.add_argument('--label_len', type=int, default=48, help='start token length of Informer decoder')
-parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
+parser.add_argument('--pred_len', type=int, default=48, help='prediction sequence length')
 
 parser.add_argument('--dropout', type=float, default=0.5, help='dropout')
 parser.add_argument('--embed', type=str, default='timeF', help='time features encoding, options:[timeF, fixed, learned]')
@@ -31,9 +31,9 @@ parser.add_argument('--mix', action='store_false', help='use mix attention in ge
 parser.add_argument('--cols', type=str, nargs='+', help='file list')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
 parser.add_argument('--itr', type=int, default=0, help='experiments times')
-parser.add_argument('--train_epochs', type=int, default=10, help='train epochs')
+parser.add_argument('--train_epochs', type=int, default=50, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=32, help='batch size of train input data')
-parser.add_argument('--patience', type=int, default=15, help='early stopping patience')
+parser.add_argument('--patience', type=int, default=10, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')
 parser.add_argument('--des', type=str, default='test',help='exp description')
 parser.add_argument('--loss', type=str, default='mae',help='loss function')
@@ -63,12 +63,12 @@ parser.add_argument('--lastWeight', type=float, default=1.0)
 parser.add_argument('--positionalEcoding', type=bool, default=False)
 parser.add_argument('--groups', type=int, default=1)
 parser.add_argument('--layers', type=int, default=3)
-parser.add_argument('--stacks', type=int, default=2, help='1 stack or 2 stacks')
+parser.add_argument('--stacks', type=int, default=1, help='1 stack or 2 stacks')
 
 
 # TCN
 
-parser.add_argument('--levels', type=int, default=7,
+parser.add_argument('--levels', type=int, default=4,
                     help='# of levels (default: 8)')
 parser.add_argument('--nhid', type=int, default=32,
                     help='number of hidden units per layer (default: 30)')
@@ -149,7 +149,7 @@ if args.itr:
     print('FFFFFinal min normed mse:{:.4f}, mae:{:.4f}'.format(min(mse_), min(mae_)))
     print('FFFFFinal min denormed mse:{:.4f}, mae:{:.4f}'.format(min(mses_), min(maes_)))
 else:
-    setting = '{}_{}_ft{}_sl{}_ll{}_pl{}_mx{}_{}_lr{}_bs{}_hid{}_s{}_l{}_dp{}_inv{}_itr{}'.format(args.model,args.data, args.features, args.seq_len, args.label_len, args.pred_len,args.mix,args.des,args.learning_rate,args.batch_size,args.hidden_size,args.stacks, args.layers,args.dropout,args.inverse,args.itr)
+    setting = 'VIS_{}_Levels{}_hid{}_{}_ft{}_sl{}_ll{}_pl{}_mx{}_{}_lr{}_bs{}_hid{}_s{}_l{}_dp{}_inv{}_itr{}'.format(args.model, args.levels, args.nhid, args.data, args.features, args.seq_len, args.label_len, args.pred_len,args.mix,args.des,args.learning_rate,args.batch_size,args.hidden_size,args.stacks, args.layers,args.dropout,args.inverse,args.itr)
     exp = Exp(args)  # set experiments
     print('>>>>>>>start training : {}>>>>>>>>>>>>>>>>>>>>>>>>>>'.format(setting))
     exp.train(setting)

@@ -20,6 +20,7 @@ warnings.filterwarnings('ignore')
 
 from models.IDCN import IDCNet
 from models.IDCN_Ecoder import IDCNetEcoder
+from models.TCN import TCN
 
 class Exp_Informer(Exp_Basic):
     def __init__(self, args):
@@ -56,7 +57,7 @@ class Exp_Informer(Exp_Basic):
             #     self.args.mix,
             #     self.device
             # ).float()
-        else:
+        elif self.args.model =='IDCN':
             if self.args.layers == 2:
                 part = [[1, 1], [0, 0], [0, 0]]
             if self.args.layers == 3:
@@ -86,6 +87,10 @@ class Exp_Informer(Exp_Basic):
                                number_level_part=part, num_layers = self.args.layers, concat_len=self.args.concat_len)
             else:
                 print('Error!')
+        else:
+            channel_sizes = [self.args.nhid] * self.args.levels
+            model = TCN(7, output_len= self.args.pred_len, num_channels=channel_sizes, kernel_size=self.args.kernel, dropout=self.args.dropout)
+
         print(model)
 #        if self.args.use_multi_gpu and self.args.use_gpu:
 #            model = nn.DataParallel(model, device_ids=self.args.device_ids)
@@ -382,6 +387,23 @@ class Exp_Informer(Exp_Basic):
             # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
             # np.save(folder_path + 'pred.npy', preds)
             # np.save(folder_path + 'true.npy', trues)
+            # result save
+            # folder_path = './results/' + setting + '/'
+            # if not os.path.exists(folder_path):
+            #     os.makedirs(folder_path)
+            # print(folder_path)
+            # # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
+            # np.save(folder_path + 'pred.npy', preds)
+            # np.save(folder_path + 'true.npy', trues)
+            # np.save(folder_path + 'pred_scales.npy', pred_scales)
+            # np.save(folder_path + 'true_scales.npy', true_scales)
+            #
+            # np.savetxt(f'{folder_path}/pred.csv', preds[0], delimiter=",")
+            # np.savetxt(f'{folder_path}/true.csv', trues[0], delimiter=",")
+            # np.savetxt(f'{folder_path}/pred_scales.csv',
+            #            pred_scales[0], delimiter=",")
+            # np.savetxt(f'{folder_path}/true_scales.csv',
+            #            true_scales[0], delimiter=",")
 
         elif self.args.stacks == 2:
             preds = np.array(preds)
@@ -409,14 +431,7 @@ class Exp_Informer(Exp_Basic):
             print('TTTT Final --> denormed mse:{:.4f}, mae:{:.4f}, rmse:{:.4f}, mape:{:.4f}, mspe:{:.4f}, corr:{:.4f}'.format(mse, mae, rmse, mape, mspe, corr))
 
 
-            # result save
-            # folder_path = './results/' + setting + '/'
-            # if not os.path.exists(folder_path):
-            #     os.makedirs(folder_path)
 
-            # np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-            # np.save(folder_path + 'pred.npy', preds)
-            # np.save(folder_path + 'true.npy', trues)
         else:
             print('Error!')
         return mae, maes, mse, mses
